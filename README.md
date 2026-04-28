@@ -6,30 +6,11 @@
 
 ## Install
 
-Prebuilt **Cursor stats** binaries are on [**GitHub Releases**](https://github.com/fontana-labs/cursor-stats/releases/latest). Open the latest release and download the file that matches your system.
-
-<table>
-<tr>
-<td align="center" width="33%" valign="top">
-<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/windows11/windows11-original.svg" width="48" height="48" alt="Windows" />
-<h3>Windows</h3>
-<p><a href="https://github.com/fontana-labs/cursor-stats/releases/latest"><strong>Download latest →</strong></a></p>
-<p>NSIS <strong>Setup</strong> (<code>.exe</code>) or <strong>portable</strong> <code>.exe</code></p>
-</td>
-<td align="center" width="33%" valign="top">
-<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/apple/apple-original.svg" width="48" height="48" alt="macOS" />
-<h3>macOS</h3>
-<p><a href="https://github.com/fontana-labs/cursor-stats/releases/latest"><strong>Download latest →</strong></a></p>
-<p><strong>DMG</strong> or <strong>ZIP</strong></p>
-</td>
-<td align="center" width="33%" valign="top">
-<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/linux/linux-original.svg" width="48" height="48" alt="Linux" />
-<h3>Linux</h3>
-<p><a href="https://github.com/fontana-labs/cursor-stats/releases/latest"><strong>Download latest →</strong></a></p>
-<p><strong>AppImage</strong> or <strong>deb</strong></p>
-</td>
-</tr>
-</table>
+| Windows | macOS | Linux |
+|:-------:|:-----:|:-----:|
+| [![Windows](https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/windows11/windows11-original.svg)](https://github.com/fontana-labs/cursor-stats/releases) | [![macOS](https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/apple/apple-original.svg)](https://github.com/fontana-labs/cursor-stats/releases) | [![Linux](https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/linux/linux-original.svg)](https://github.com/fontana-labs/cursor-stats/releases) |
+| **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** | **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** | **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** |
+| NSIS **Setup** (`.exe`) or **portable** `.exe` | **DMG** or **ZIP** | **AppImage** or **deb** |
 
 ### From source
 
@@ -130,7 +111,7 @@ Full guidelines: **[CONTRIBUTING.md](./CONTRIBUTING.md)**.
 
 ## Security
 
-Report security issues **privately** per **[SECURITY.md](./SECURITY.md)** (GitHub Security Advisories preferred). Install from **[official releases](https://github.com/fontana-labs/cursor-stats/releases/latest)** or source you trust.
+Report security issues **privately** per **[SECURITY.md](./SECURITY.md)** (GitHub Security Advisories preferred). Install from **[GitHub Releases](https://github.com/fontana-labs/cursor-stats/releases)** or source you trust.
 
 ## Contributing
 

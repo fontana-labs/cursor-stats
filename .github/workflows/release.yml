@@ -2,8 +2,12 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
+
+# One release at a time on main; newer pushes wait instead of interleaving uploads.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -68,6 +72,12 @@ jobs:
     needs: [build-mac, build-windows, build-linux]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - name: Release tag from package version
+        id: meta
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "tag=v${VERSION}-build.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -82,8 +92,11 @@ jobs:
           ls -la upload
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.tag }}
           draft: false
           generate_release_notes: true
+          make_latest: true
           files: upload/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
