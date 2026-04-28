@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-04-28
+
+### Client
+
+- Packaged **executable / installer basename** is **`cursor-stats`**; window title and branding stay **Cursor stats**. Linux **AppImage** and **deb** use flat names under **`release/`** (no scoped `@fontana-labs/` path segment).
+
+### Fixed
+
+- **Linux deb** on CI: **fpm** no longer targets a missing **`release/@fontana-labs/...`** directory when **`package.json` `name`** is scoped — **`executableName`** plus **`linux.artifactName`** control outputs.
+- **Windows** release builds: electron-builder no longer demands **`GH_TOKEN`** mid-**`dist:win`**; **`publish`: `null`** defers uploads to **GitHub Actions** (**`softprops/action-gh-release`**).
+
+### Removed
+
+- **`.github/workflows/ci.yml`** — packaging is already exercised by the **Release** workflow on every **`main`** push.
+
 ## [0.1.2] - 2026-04-28
 
 ### Added
@@ -31,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cross-platform packaging via electron-builder (macOS, Windows, Linux)
 - GitHub Actions workflows for CI and releases on push to `main`
 
+[0.1.3]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.2]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.1]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.0]: https://github.com/fontana-labs/cursor-stats/releases/tag/v0.1.0
