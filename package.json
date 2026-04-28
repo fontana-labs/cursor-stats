@@ -1,0 +1,70 @@
+{
+  "name": "@fontana-labs/cursor-stats",
+  "version": "0.1.0",
+  "description": "Open-source cross-platform system tray widget for Cursor usage and billing stats",
+  "author": "Fontana Labs",
+  "license": "MIT",
+  "main": "src/main/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fontana-labs/cursor-stats.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fontana-labs/cursor-stats/issues"
+  },
+  "homepage": "https://github.com/fontana-labs/cursor-stats#readme",
+  "keywords": [
+    "cursor",
+    "open-source",
+    "electron",
+    "tray",
+    "usage",
+    "billing",
+    "dashboard"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.cursorwidget.app",
+    "productName": "Cursor stats",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "package.json",
+      "src/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    }
+  }
+}

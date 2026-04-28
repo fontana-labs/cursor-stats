@@ -1,0 +1,2359 @@
+<!DOCTYPE html>
+<!-- Cursor stats dashboard (renderer). IPC via preload: window.cursorWidget. See docs/ARCHITECTURE.md -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cursor stats</title>
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem("cursorStatsTheme");
+          var t =
+            s === "light" || s === "dark"
+              ? s
+              : window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg-page: #f4f4f5;
+        --bg-surface: #ffffff;
+        --border: #e4e4e7;
+        --text: #18181b;
+        --text-muted: #71717a;
+        --text-heading: #52525b;
+        --text-footer: #a1a1aa;
+        --row-divider: #f4f4f5;
+        --th-bg: #fafafa;
+        --code-bg: #f4f4f5;
+        --btn-bg: #ffffff;
+        --btn-border: #d4d4d8;
+        --btn-primary-bg: #18181b;
+        --btn-primary-fg: #fafafa;
+        --chip-border: #e4e4e7;
+        --chip-bg: #fafafa;
+        --user-grad1: #e4e4e7;
+        --user-grad2: #d4d4d8;
+        --user-initial-fg: #3f3f46;
+        --chart-bg: #ffffff;
+        --chart-inner: #fafafa;
+        --pie-canvas: #fafafa;
+        --pie-bg: #f4f4f5;
+        --pie-empty: #e4e4e7;
+        --legend: #71717a;
+        --link: #71717a;
+        --row-latest-purple: rgba(139, 92, 246, 0.16);
+        --row-latest-blue: rgba(37, 99, 235, 0.16);
+        /** Stronger overlays for pricing usage meter (aligned to purple / blue chips) */
+        --usage-meter-purple-strong: rgba(124, 58, 237, 0.58);
+        --usage-meter-blue-strong: rgba(37, 99, 235, 0.58);
+        --usage-meter-neutral-strong: rgba(71, 85, 105, 0.52);
+        --warn-bg: #fef9c3;
+        --warn-fg: #713f12;
+        --warn-border: #fde047;
+        --err-bg: #fee2e2;
+        --err-fg: #991b1b;
+        --err-border: #fecaca;
+        --pie-cap: #3f3f46;
+        --leg-pct: #52525b;
+        --st-green-bg: #ecfdf5;
+        --st-green-br: #6ee7b7;
+        --st-green-fg: #14532d;
+        --st-amber-bg: #fffbeb;
+        --st-amber-br: #fbbf24;
+        --st-amber-fg: #78350f;
+        --st-red-bg: #fef2f2;
+        --st-red-br: #f87171;
+        --st-red-fg: #991b1b;
+        --st-muted-bg: #fafafa;
+        --st-muted-br: #e4e4e7;
+        --st-muted-fg: #71717a;
+        --sw-over: rgba(249, 115, 22, 0.65);
+      }
+      [data-theme="dark"] {
+        color-scheme: dark;
+        --bg-page: #09090b;
+        --bg-surface: #18181b;
+        --border: #3f3f46;
+        --text: #fafafa;
+        --text-muted: #a1a1aa;
+        --text-heading: #d4d4d8;
+        --text-footer: #71717a;
+        --row-divider: #27272a;
+        --th-bg: #27272a;
+        --code-bg: #27272a;
+        --btn-bg: #27272a;
+        --btn-border: #52525b;
+        --btn-primary-bg: #e4e4e7;
+        --btn-primary-fg: #18181b;
+        --chip-border: #3f3f46;
+        --chip-bg: #27272a;
+        --user-grad1: #3f3f46;
+        --user-grad2: #52525b;
+        --user-initial-fg: #e4e4e7;
+        --chart-bg: #18181b;
+        --chart-inner: #27272a;
+        --pie-canvas: #18181b;
+        --pie-bg: #27272a;
+        --pie-empty: #3f3f46;
+        --legend: #a1a1aa;
+        --link: #a1a1aa;
+        --row-latest-purple: rgba(139, 92, 246, 0.3);
+        --row-latest-blue: rgba(37, 99, 235, 0.3);
+        --usage-meter-purple-strong: rgba(167, 139, 250, 0.62);
+        --usage-meter-blue-strong: rgba(96, 165, 250, 0.62);
+        --usage-meter-neutral-strong: rgba(148, 163, 184, 0.55);
+        --warn-bg: #422006;
+        --warn-fg: #fef08a;
+        --warn-border: #a16207;
+        --err-bg: #450a0a;
+        --err-fg: #fecaca;
+        --err-border: #991b1b;
+        --pie-cap: #d4d4d8;
+        --leg-pct: #a1a1aa;
+        --st-green-bg: #052e1a;
+        --st-green-br: #166534;
+        --st-green-fg: #bbf7d0;
+        --st-amber-bg: #422006;
+        --st-amber-br: #a16207;
+        --st-amber-fg: #fde68a;
+        --st-red-bg: #450a0a;
+        --st-red-br: #b91c1c;
+        --st-red-fg: #fecaca;
+        --st-muted-bg: #27272a;
+        --st-muted-br: #3f3f46;
+        --st-muted-fg: #a1a1aa;
+        --sw-over: rgba(251, 146, 60, 0.75);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-size: 12px;
+        line-height: 1.3;
+        background: var(--bg-page);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        display: flex;
+        flex-direction: column;
+      }
+      .hdr {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 5px 8px;
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      .hdr-title-block {
+        min-width: 0;
+        flex: 1;
+      }
+      .hdr h1 {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+      }
+      .hdr-user-name {
+        margin: 1px 0 0;
+        font-size: 10px;
+        font-weight: 500;
+        line-height: 1.2;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .hdr-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .auth-wrap {
+        display: flex;
+        align-items: center;
+        min-width: 28px;
+        justify-content: center;
+      }
+      .user-chip {
+        position: relative;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      .user-avatar {
+        position: relative;
+        z-index: 1;
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .user-avatar-fallback {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--user-initial-fg);
+        background: linear-gradient(135deg, var(--user-grad1), var(--user-grad2));
+      }
+      button {
+        font: inherit;
+        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        border: 1px solid var(--btn-border);
+        background: var(--btn-bg);
+        color: var(--text);
+        cursor: pointer;
+      }
+      button.btn-theme {
+        font-size: 14px;
+        line-height: 1;
+        padding: 2px 4px;
+        min-width: auto;
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+      }
+      button.btn-theme:hover {
+        color: var(--text-heading);
+      }
+      button.primary {
+        background: var(--btn-primary-bg);
+        color: var(--btn-primary-fg);
+        border-color: var(--btn-primary-bg);
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+      #main-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 4px 8px 3px;
+        overflow: hidden;
+      }
+      .view-panel {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        overflow: hidden;
+      }
+      .view-panel[hidden] {
+        display: none;
+      }
+      .hint {
+        margin: 0 0 3px;
+        font-size: 9px;
+        color: var(--text-muted);
+        line-height: 1.25;
+      }
+      .chart-wrap {
+        background: var(--chart-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 5px 6px 2px;
+        flex: 0 0 auto;
+      }
+      .chart-wrap__head {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 4px 10px;
+        margin-bottom: 2px;
+      }
+      .chart-wrap__head h2,
+      .section-tight h2 {
+        margin: 0 0 2px;
+        font-size: 9px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-heading);
+      }
+      .chart-wrap__head h2 {
+        margin: 0;
+        flex: 0 1 auto;
+      }
+      .chart-wrap__meta {
+        font-size: 8px;
+        line-height: 1.3;
+        color: var(--text-muted);
+        text-align: right;
+        flex: 0 1 auto;
+        min-width: 0;
+        max-width: 60%;
+      }
+      .chart-wrap__meta .chart-meta-line {
+        display: flex;
+        justify-content: flex-end;
+        gap: 4px 8px;
+        flex-wrap: wrap;
+        font-size: inherit;
+        line-height: inherit;
+      }
+      .chart-wrap__meta .chart-meta-line + .chart-meta-line {
+        margin-top: 2px;
+      }
+      .chart-wrap__meta .chart-meta-line strong {
+        color: var(--text-heading);
+        font-weight: 650;
+      }
+      #usage-chart {
+        display: block;
+        width: 100%;
+        height: 100px;
+        border-radius: 4px;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        font-size: 8px;
+        color: var(--legend);
+        margin-top: 2px;
+        padding: 0 1px 2px;
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+      }
+      .sw {
+        width: 12px;
+        height: 3px;
+        border-radius: 1px;
+        flex-shrink: 0;
+      }
+      .sw.allow {
+        background: repeating-linear-gradient(90deg, #2563eb 0 4px, transparent 4px 8px);
+        height: 2px;
+      }
+      .sw.auto {
+        background: #8b5cf6;
+      }
+      .sw.api {
+        background: #2563eb;
+      }
+      .sw.over {
+        background: var(--sw-over);
+        height: 8px;
+        border-radius: 2px;
+      }
+      .section-tight {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 4px 6px;
+        flex: 0 0 auto;
+      }
+      .section-tight--pies {
+        flex: 0 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .section-flex {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 2px 0;
+        border-bottom: 1px solid var(--row-divider);
+        font-size: 10px;
+      }
+      .row:last-child {
+        border-bottom: none;
+      }
+      .muted {
+        color: var(--text-muted);
+      }
+      .banner {
+        padding: 4px 6px;
+        border-radius: 5px;
+        font-size: 10px;
+        margin-bottom: 4px;
+        flex-shrink: 0;
+      }
+      .banner.warn {
+        background: var(--warn-bg);
+        color: var(--warn-fg);
+        border: 1px solid var(--warn-border);
+      }
+      .banner.err {
+        background: var(--err-bg);
+        color: var(--err-fg);
+        border: 1px solid var(--err-border);
+      }
+      .table-wrap {
+        overflow: auto;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        flex: 1;
+        min-height: 0;
+      }
+      .table-wrap--pricing {
+        max-height: none;
+      }
+      #pricing-section .table-wrap {
+        font-size: 9px;
+      }
+      tr.row-latest-purple td {
+        background: var(--row-latest-purple);
+      }
+      tr.row-latest-blue td {
+        background: var(--row-latest-blue);
+      }
+      /** Usage column only: fraction of table spend; hues match Composer purple / API-ish blue / slate */
+      #models-table tbody tr.pricing-row--meter > td:last-child {
+        background-image: linear-gradient(
+            to right,
+            var(--usage-meter-strong) var(--usage-meter-pct, 0%),
+            transparent var(--usage-meter-pct, 0%)
+          ),
+          linear-gradient(
+            var(--usage-meter-soft, transparent),
+            var(--usage-meter-soft, transparent)
+          );
+      }
+      th.th-sort {
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+      }
+      th.th-sort:hover {
+        color: var(--text);
+      }
+      th.th-sort:focus-visible {
+        outline: 2px solid var(--btn-primary-bg);
+        outline-offset: 1px;
+      }
+      th.th-sort--active.th-sort--asc::after {
+        content: " ▲";
+        font-size: 7px;
+        opacity: 0.75;
+        font-weight: 700;
+      }
+      th.th-sort--active.th-sort--desc::after {
+        content: " ▼";
+        font-size: 7px;
+        opacity: 0.75;
+        font-weight: 700;
+      }
+      th.th-sort--active.th-sort--newest::after {
+        content: " ◆";
+        font-size: 7px;
+        opacity: 0.75;
+        font-weight: 700;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 2px 4px;
+        border-bottom: 1px solid var(--row-divider);
+        vertical-align: top;
+      }
+      th {
+        position: sticky;
+        top: 0;
+        background: var(--th-bg);
+        font-weight: 600;
+        color: var(--text-heading);
+        z-index: 1;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      .num {
+        text-align: right;
+        white-space: nowrap;
+      }
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 3px 8px 4px;
+        font-size: 8px;
+        color: var(--text-footer);
+        border-top: 1px solid var(--border);
+        background: var(--bg-surface);
+        flex-shrink: 0;
+      }
+      .footer-credit {
+        white-space: nowrap;
+      }
+      .footer-fontana {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .footer-fontana .footer-fontana-mark {
+        display: block;
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
+        object-fit: contain;
+      }
+      footer a {
+        color: var(--link);
+      }
+      .pie-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto 80px auto auto;
+        column-gap: 6px;
+        row-gap: 0;
+        margin-top: 2px;
+        min-height: 0;
+      }
+      .pie-cell {
+        display: grid;
+        grid-template-rows: subgrid;
+        grid-row: 1 / span 4;
+        min-width: 0;
+      }
+      .pie-cell:first-of-type {
+        grid-column: 1;
+      }
+      .pie-cell:last-of-type {
+        grid-column: 2;
+      }
+      .on-demand-below-pies {
+        margin-top: 6px;
+      }
+      .pie-cap {
+        font-size: 9px;
+        font-weight: 600;
+        color: var(--pie-cap);
+        margin-bottom: 1px;
+      }
+      .pie-canvas {
+        display: block;
+        width: 100%;
+        height: 80px;
+        border-radius: 4px;
+        background: var(--pie-canvas);
+      }
+      .pie-leg {
+        margin-top: 2px;
+        font-size: 8px;
+        line-height: 1.3;
+        max-height: 132px;
+        overflow: auto;
+      }
+      .leg-row {
+        display: grid;
+        grid-template-columns: 7px minmax(0, 1fr) auto minmax(0, auto);
+        align-items: center;
+        gap: 2px 4px;
+        margin-bottom: 2px;
+      }
+      .leg-row .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 2px;
+        flex-shrink: 0;
+        grid-column: 1;
+      }
+      .leg-row .name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        grid-column: 2;
+      }
+      .leg-row .leg-tok {
+        color: var(--text-footer);
+        font-size: 7px;
+        white-space: nowrap;
+        text-align: right;
+        max-width: 64px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        grid-column: 3;
+      }
+      .leg-row .pct {
+        color: var(--leg-pct);
+        font-weight: 600;
+        white-space: nowrap;
+        grid-column: 4;
+      }
+      .pie-status {
+        margin-top: 3px;
+        padding: 4px 5px;
+        border-radius: 4px;
+        font-size: 8px;
+        line-height: 1.3;
+        border: 1px solid transparent;
+        min-height: 0;
+        align-self: stretch;
+        display: grid;
+        align-content: center;
+        box-sizing: border-box;
+      }
+      .pie-status strong {
+        font-weight: 650;
+        font-size: 8px;
+        letter-spacing: 0.01em;
+      }
+      .pie-status--green {
+        background: var(--st-green-bg);
+        border-color: var(--st-green-br);
+        color: var(--st-green-fg);
+      }
+      .pie-status--amber {
+        background: var(--st-amber-bg);
+        border-color: var(--st-amber-br);
+        color: var(--st-amber-fg);
+      }
+      .pie-status--red {
+        background: var(--st-red-bg);
+        border-color: var(--st-red-br);
+        color: var(--st-red-fg);
+      }
+      .pie-status--muted {
+        background: var(--st-muted-bg);
+        border-color: var(--st-muted-br);
+        color: var(--st-muted-fg);
+      }
+      code {
+        font-size: 9px;
+        background: var(--code-bg);
+        padding: 0 2px;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="hdr">
+      <div class="hdr-title-block">
+        <h1>Cursor stats</h1>
+        <p id="hdr-user-name" class="hdr-user-name" hidden></p>
+      </div>
+      <div class="hdr-actions">
+        <button type="button" class="btn-theme" id="btn-theme" title="Theme" aria-label="Toggle color theme">
+          &#9728;
+        </button>
+        <div class="auth-wrap" id="auth-wrap">
+          <button type="button" class="primary" id="btn-signin">Sign in…</button>
+          <div id="user-chip" class="user-chip" hidden>
+            <div id="user-avatar-fallback" class="user-avatar-fallback" hidden>?</div>
+            <img
+              id="user-avatar"
+              class="user-avatar"
+              alt=""
+              width="28"
+              height="28"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            />
+          </div>
+        </div>
+      </div>
+    </header>
+    <main id="main-body">
+      <div id="banner" class="banner" hidden></div>
+      <div id="view-usage" class="view-panel">
+        <div class="chart-wrap">
+          <div class="chart-wrap__head">
+            <h2>Month vs allowance pace</h2>
+            <div class="chart-wrap__meta" id="chart-usage-meta" role="status" aria-live="polite"></div>
+          </div>
+          <canvas id="usage-chart" width="320" height="100"></canvas>
+          <div class="legend">
+            <span><i class="sw allow"></i> Allowance</span>
+            <span><i class="sw auto"></i> Auto + Composer</span>
+            <span><i class="sw api"></i> API</span>
+            <span><i class="sw over"></i> Over 100% pool</span>
+          </div>
+        </div>
+        <section class="section-tight section-tight--pies" id="breakdown-section">
+          <h2>Usage breakdown</h2>
+          <div class="pie-grid">
+            <div class="pie-cell">
+              <div class="pie-cap">Auto + Composer</div>
+              <canvas class="pie-canvas" id="pie-auto"></canvas>
+              <div id="pie-auto-leg" class="pie-leg"></div>
+              <div id="pie-auto-status" class="pie-status pie-status--muted" hidden aria-live="polite"></div>
+            </div>
+            <div class="pie-cell">
+              <div class="pie-cap">API pool</div>
+              <canvas class="pie-canvas" id="pie-api"></canvas>
+              <div id="pie-api-leg" class="pie-leg"></div>
+              <div id="pie-api-status" class="pie-status pie-status--muted" hidden aria-live="polite"></div>
+            </div>
+          </div>
+          <div
+            id="on-demand-period-box"
+            class="pie-status pie-status--muted on-demand-below-pies"
+            hidden
+            role="status"
+            aria-live="polite"
+          ></div>
+        </section>
+        <section class="section-tight section-flex" id="pricing-section">
+          <h2>Models ($/1M tok) <span class="muted" style="font-weight: normal; font-size: 0.85em">— Usage = this cycle</span></h2>
+          <p id="pricing-status" class="muted hint" style="margin-top: 0" hidden></p>
+          <div class="table-wrap table-wrap--pricing">
+            <table id="models-table">
+              <thead>
+                <tr>
+                  <th class="th-sort" scope="col" data-sort="model" role="columnheader" tabindex="0">Model</th>
+                  <th class="th-sort num" scope="col" data-sort="in" role="columnheader" tabindex="0">In</th>
+                  <th class="th-sort num" scope="col" data-sort="out" role="columnheader" tabindex="0">Out</th>
+                  <th
+                    class="th-sort num"
+                    scope="col"
+                    data-sort="usage"
+                    role="columnheader"
+                    tabindex="0"
+                    title="Spend this cycle from dashboard aggregations; modelIntent matched to each model name"
+                  >
+                    Usage ($)
+                  </th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer>
+      <span>
+        <a href="#" id="link-spending">Spending</a>
+        ·
+        <a href="#" id="link-docs">Models &amp; pricing</a>
+      </span>
+      <a
+        class="footer-credit footer-fontana"
+        href="https://fontana-ai.com"
+        id="link-fontana"
+        title="Fontana"
+      >
+        <img
+          src="fontana-logo.png"
+          alt=""
+          class="footer-fontana-mark"
+          width="16"
+          height="16"
+          aria-hidden="true"
+        />
+        <span>Made by Fontana Labs</span>
+      </a>
+    </footer>
+    <script>
+      (() => {
+        const cw = window.cursorWidget;
+        if (!cw) {
+          document.body.innerHTML = '<p style="padding:16px">Preload not available.</p>';
+          return;
+        }
+
+        const SPENDING_URL = "https://cursor.com/dashboard/spending";
+        const DOCS_URL = "https://cursor.com/docs/models-and-pricing#model-pricing";
+        const FONTANA_URL = "https://fontana-ai.com";
+
+        /** Drop shadow for pie donut center % — same in both themes; fill is theme-specific. */
+        const PIE_CENTER_SHADOW = {
+          color: "rgba(0,0,0,0.5)",
+          blur: 3,
+          offsetY: 1,
+        };
+
+        const banner = document.getElementById("banner");
+        const chartUsageMeta = document.getElementById("chart-usage-meta");
+        const pricingStatus = document.getElementById("pricing-status");
+        const modelsTable = document.getElementById("models-table");
+        const modelsTbody = modelsTable ? modelsTable.querySelector("tbody") : null;
+        let pricingSortKey = null;
+        let pricingSortDir = 1;
+        /** 0 = A→Z, 1 = Z→A, 2 = newest (highlighted first, then by version). Only when `pricingSortKey === "model"`. */
+        let pricingModelCycle = 0;
+        let lastPricingPayload = null;
+        /** From `getChartPayload()` — per-row spend from get-aggregated-usage-events. */
+        let lastAggregatedUsage = null;
+        const btnSignin = document.getElementById("btn-signin");
+        const pieAutoStatus = document.getElementById("pie-auto-status");
+        const pieApiStatus = document.getElementById("pie-api-status");
+        const linkSpending = document.getElementById("link-spending");
+        const linkDocs = document.getElementById("link-docs");
+        const linkFontana = document.getElementById("link-fontana");
+        const chartCanvas = document.getElementById("usage-chart");
+        const pieAuto = document.getElementById("pie-auto");
+        const pieApi = document.getElementById("pie-api");
+        const pieAutoLeg = document.getElementById("pie-auto-leg");
+        const pieApiLeg = document.getElementById("pie-api-leg");
+        const userChip = document.getElementById("user-chip");
+        const userAvatar = document.getElementById("user-avatar");
+        const userAvatarFallback = document.getElementById("user-avatar-fallback");
+        const hdrUserName = document.getElementById("hdr-user-name");
+        const btnTheme = document.getElementById("btn-theme");
+        const onDemandPeriodBox = document.getElementById("on-demand-period-box");
+
+        const PIE_AUTO_COLORS = [
+          "#7c3aed",
+          "#a78bfa",
+          "#c4b5fd",
+          "#8b5cf6",
+          "#6d28d9",
+          "#5b21b6",
+          "#4c1d95",
+          "#a855f7",
+          "#7e22ce",
+          "#6b21a8",
+          "#9d74f2",
+        ];
+        const PIE_API_COLORS = [
+          "#2563eb",
+          "#60a5fa",
+          "#93c5fd",
+          "#1d4ed8",
+          "#3b82f6",
+          "#1e40af",
+          "#0ea5e9",
+          "#38bdf8",
+          "#0c4a6e",
+          "#0284c7",
+          "#0369a1",
+        ];
+        const THEME_KEY = "cursorStatsTheme";
+
+        let currentSession = null;
+        let lastStatsRef = null;
+        let lastAvatarKey = null;
+        let userTheme = null;
+        try {
+          const st = localStorage.getItem(THEME_KEY);
+          if (st === "light" || st === "dark") userTheme = st;
+        } catch (e) {}
+
+        function isDarkMode() {
+          return document.documentElement.getAttribute("data-theme") === "dark";
+        }
+
+        function chartTheme() {
+          if (isDarkMode()) {
+            return {
+              plotBg: "#27272a",
+              grid: "#3f3f46",
+              axis: "#71717a",
+              label: "#a1a1aa",
+              emptyHint: "#a1a1aa",
+              pieFill: "#27272a",
+              pieEmpty: "#3f3f46",
+              sliceEdge: "rgba(0,0,0,0.5)",
+              pieCenterText: "#d4d4d8",
+              poolOverageBand: "rgba(251, 146, 60, 0.22)",
+            };
+          }
+          return {
+            plotBg: "#fafafa",
+            grid: "#e4e4e7",
+            axis: "#a1a1aa",
+            label: "#52525b",
+            emptyHint: "#71717a",
+            pieFill: "#f4f4f5",
+            pieEmpty: "#e4e4e7",
+            sliceEdge: "rgba(255,255,255,0.85)",
+            pieCenterText: "#ffffff",
+            poolOverageBand: "rgba(249, 115, 22, 0.2)",
+          };
+        }
+
+        function syncThemeButton() {
+          if (!btnTheme) return;
+          const d = isDarkMode();
+          btnTheme.textContent = d ? "\u2600" : "\u263E";
+          btnTheme.setAttribute("title", d ? "Light mode" : "Dark mode");
+          btnTheme.setAttribute("aria-label", d ? "Switch to light mode" : "Switch to dark mode");
+        }
+
+        function applyTheme(shouldRedraw) {
+          if (userTheme === "light" || userTheme === "dark") {
+            document.documentElement.setAttribute("data-theme", userTheme);
+          } else {
+            document.documentElement.setAttribute(
+              "data-theme",
+              window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
+            );
+          }
+          syncThemeButton();
+          if (shouldRedraw) {
+            cw.getChartData().then(applyFullDashboard);
+          }
+        }
+
+        function toggleTheme() {
+          userTheme = isDarkMode() ? "light" : "dark";
+          try {
+            localStorage.setItem(THEME_KEY, userTheme);
+          } catch (e) {}
+          applyTheme(true);
+        }
+
+        function escapeHtml(s) {
+          return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+        }
+
+        function setBanner(type, text) {
+          if (!text) {
+            banner.hidden = true;
+            banner.textContent = "";
+            banner.className = "banner";
+            return;
+          }
+          banner.hidden = false;
+          banner.textContent = text;
+          banner.className = "banner " + type;
+        }
+
+        function fmtMoney(n) {
+          if (n == null || Number.isNaN(n)) return "—";
+          return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
+        }
+
+        function updateHeaderUserName(session) {
+          if (!hdrUserName) return;
+          const me = session && session.me;
+          const u = me && me.ok && me.user ? me.user : null;
+          const name = u && u.name && String(u.name).trim();
+          if (name) {
+            hdrUserName.hidden = false;
+            hdrUserName.textContent = name;
+          } else {
+            hdrUserName.hidden = true;
+            hdrUserName.textContent = "";
+          }
+        }
+
+        function absolutizeCursorAssetUrl(url) {
+          if (!url || typeof url !== "string") return null;
+          const s = url.trim();
+          if (!s) return null;
+          if (/^https?:\/\//i.test(s)) return s;
+          if (s.startsWith("//")) return "https:" + s;
+          if (s.startsWith("/")) return "https://cursor.com" + s;
+          return s;
+        }
+
+        /** Match cursor-session isLikelyProfileImageUrl (WorkOS CDN has no file extension). */
+        function isLikelyProfileImageUrl(s) {
+          if (typeof s !== "string") return false;
+          const t = s.trim();
+          if (t.length < 8 || t.length > 2000) return false;
+          if (!/^https?:\/\//i.test(t) && !t.startsWith("/")) return false;
+          if (/workoscdn\.com/i.test(t)) return true;
+          if (/images\/v\d+\/[\w-]+/i.test(t)) return true;
+          if (/\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(t)) return true;
+          if (/(gravatar|githubusercontent|googleusercontent|cloudinary|avatar)/i.test(t)) return true;
+          return false;
+        }
+
+        function extractPictureFromRawJson(obj, depth) {
+          if (depth == null) depth = 0;
+          if (depth > 8 || obj == null) return null;
+          if (typeof obj === "string") {
+            const s = obj.trim();
+            if (s.length < 8) return null;
+            if (!/^https?:\/\//i.test(s) && !s.startsWith("/")) return null;
+            if (isLikelyProfileImageUrl(s)) return s;
+            return null;
+          }
+          if (Array.isArray(obj)) {
+            for (const v of obj) {
+              const f = extractPictureFromRawJson(v, depth + 1);
+              if (f) return f;
+            }
+            return null;
+          }
+          if (typeof obj === "object") {
+            for (const [k, v] of Object.entries(obj)) {
+              const kl = k.toLowerCase();
+              if (
+                typeof v === "string" &&
+                (kl.includes("avatar") ||
+                  kl.includes("photo") ||
+                  kl.includes("picture") ||
+                  kl === "image" ||
+                  kl === "imageurl" ||
+                  kl.endsWith("url")) &&
+                v.length < 2000
+              ) {
+                const t = v.trim();
+                if (/^https?:\/\//i.test(t) || t.startsWith("/")) return t;
+              }
+            }
+            for (const v of Object.values(obj)) {
+              const f = extractPictureFromRawJson(v, depth + 1);
+              if (f) return f;
+            }
+          }
+          return null;
+        }
+
+        function updateHeaderAuth() {
+          const session = currentSession;
+          const me = session && session.me;
+          const u = me && me.ok && me.user ? me.user : null;
+          const stats = lastStatsRef;
+          const signedInApi = !!(me && me.ok);
+          const signedInPage = stats && stats.loggedIn === true;
+          const showSigned = signedInApi || signedInPage;
+
+          if (!showSigned) {
+            btnSignin.hidden = false;
+            userChip.hidden = true;
+            lastAvatarKey = null;
+            userAvatar.removeAttribute("src");
+            if (userAvatarFallback) {
+              userAvatarFallback.hidden = true;
+              userAvatarFallback.textContent = "?";
+            }
+            return;
+          }
+
+          btnSignin.hidden = true;
+          userChip.hidden = false;
+
+          const labelParts = [];
+          if (u) {
+            if (u.name) labelParts.push(u.name);
+            if (u.email) labelParts.push(u.email);
+            if (u.plan) labelParts.push(String(u.plan));
+          } else if (stats && (stats.resetLabel || stats.note)) {
+            if (stats.resetLabel) labelParts.push("Billing: " + stats.resetLabel);
+          } else {
+            labelParts.push("Signed in");
+          }
+          userChip.title = labelParts.length ? labelParts.join(" · ") : "Signed in";
+
+          let pic =
+            u && u.picture
+              ? absolutizeCursorAssetUrl(u.picture)
+              : me && me.ok && me.raw
+                ? absolutizeCursorAssetUrl(extractPictureFromRawJson(me.raw))
+                : null;
+          if (!pic && session && session.accountAvatarUrl) {
+            pic = absolutizeCursorAssetUrl(session.accountAvatarUrl);
+          }
+          const key = u
+            ? (u.id != null ? String(u.id) : "") + "\0" + (pic || u.email || u.name || "")
+            : (pic || "page") + "\0" + (stats && stats.loggedIn);
+
+          if (pic) {
+            if (lastAvatarKey !== key) {
+              lastAvatarKey = key;
+              if (userAvatarFallback) userAvatarFallback.hidden = true;
+              userAvatar.hidden = false;
+              userAvatar.onerror = function () {
+                userAvatar.hidden = true;
+                if (userAvatarFallback) {
+                  userAvatarFallback.hidden = false;
+                  const base = (u && (u.email || u.name)) || "?";
+                  userAvatarFallback.textContent = String(base).charAt(0).toUpperCase();
+                }
+              };
+              userAvatar.onload = function () {
+                userAvatar.hidden = false;
+                if (userAvatarFallback) userAvatarFallback.hidden = true;
+              };
+              userAvatar.src = pic;
+            }
+          } else if (u) {
+            lastAvatarKey = key;
+            userAvatar.removeAttribute("src");
+            userAvatar.hidden = true;
+            if (userAvatarFallback) {
+              userAvatarFallback.hidden = false;
+              const c = (u.email || u.name || "?").charAt(0).toUpperCase();
+              userAvatarFallback.textContent = c;
+            }
+          } else {
+            lastAvatarKey = key;
+            userAvatar.removeAttribute("src");
+            userAvatar.hidden = true;
+            if (userAvatarFallback) {
+              userAvatarFallback.hidden = false;
+              userAvatarFallback.textContent = "✓";
+            }
+          }
+        }
+
+        function remainingPctForPieCenter(slices, poolPercent) {
+          if (poolPercent != null && Number.isFinite(Number(poolPercent))) {
+            const u = Number(poolPercent);
+            return Math.max(0, Math.min(100, Math.round(100 - u)));
+          }
+          if (!slices || !slices.length) return null;
+          for (let i = 0; i < slices.length; i++) {
+            if (/remaining/i.test(String(slices[i].label || ""))) {
+              return Math.max(0, Math.min(100, Math.round(Math.max(0, slices[i].value) * 100)));
+            }
+          }
+          return null;
+        }
+
+        function drawPieCenterRemaining(ctx, cx, cy, pct) {
+          if (pct == null || !Number.isFinite(pct)) return;
+          const ct = chartTheme();
+          const label = String(Math.round(pct)) + "%";
+          const dim = Math.min(ctx.canvas.width, ctx.canvas.height) / (window.devicePixelRatio || 1);
+          const fontSize = Math.min(20, Math.max(13, Math.floor(dim * 0.26)));
+          ctx.save();
+          ctx.font = "650 " + fontSize + 'px system-ui, -apple-system, "Segoe UI", sans-serif';
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.shadowColor = PIE_CENTER_SHADOW.color;
+          ctx.shadowBlur = PIE_CENTER_SHADOW.blur;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = PIE_CENTER_SHADOW.offsetY;
+          ctx.fillStyle = ct.pieCenterText;
+          ctx.fillText(label, cx, cy);
+          ctx.restore();
+        }
+
+        function drawPieCanvas(canvas, slices, palette, centerRemainingPct) {
+          if (!canvas) return;
+          const ct = chartTheme();
+          const ctx = canvas.getContext("2d");
+          const dpr = window.devicePixelRatio || 1;
+          const rect = canvas.getBoundingClientRect();
+          const w = Math.max(100, Math.floor(rect.width));
+          const h = 80;
+          canvas.width = w * dpr;
+          canvas.height = h * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.clearRect(0, 0, w, h);
+          ctx.fillStyle = ct.pieFill;
+          ctx.fillRect(0, 0, w, h);
+          const cx = w / 2;
+          const cy = h / 2 - 2;
+          const r = Math.min(w, h) * 0.35;
+          if (!slices || slices.length === 0) {
+            ctx.fillStyle = ct.pieEmpty;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+            drawPieCenterRemaining(ctx, cx, cy, centerRemainingPct);
+            return;
+          }
+          let a0 = -Math.PI / 2;
+          for (let i = 0; i < slices.length; i++) {
+            const seg = Math.max(0, slices[i].value) * Math.PI * 2;
+            if (seg <= 0) continue;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, r, a0, a0 + seg);
+            ctx.closePath();
+            ctx.fillStyle = palette[i % palette.length];
+            ctx.fill();
+            a0 += seg;
+          }
+          ctx.strokeStyle = ct.sliceEdge;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.stroke();
+          drawPieCenterRemaining(ctx, cx, cy, centerRemainingPct);
+        }
+
+        function formatPiePct(frac) {
+          const p = (frac != null && Number.isFinite(frac) ? frac : 0) * 100;
+          if (p >= 10) return "" + Math.round(p) + "%";
+          if (p >= 1) return p.toFixed(1) + "%";
+          if (p >= 0.1) return p.toFixed(1) + "%";
+          if (p > 0) return "<0.1%";
+          return "0%";
+        }
+
+        function renderPieLegend(el, slices, palette) {
+          if (!slices || !slices.length) {
+            el.innerHTML = '<p class="muted" style="margin:0;font-size:8px">—</p>';
+            return;
+          }
+          el.innerHTML = slices
+            .map(function (s, i) {
+              const tok =
+                s.tokensText != null && String(s.tokensText).trim() !== ""
+                  ? '<span class="leg-tok" title="' +
+                    escapeHtml(String(s.tokensText)) +
+                    '">' +
+                    escapeHtml(String(s.tokensText)) +
+                    "</span>"
+                  : '<span class="leg-tok" aria-hidden="true"></span>';
+              return (
+                '<div class="leg-row" title="' +
+                escapeHtml(s.label) +
+                (s.tokensText != null
+                  ? " · " + escapeHtml(String(s.tokensText))
+                  : "") +
+                '"><span class="dot" style="background:' +
+                palette[i % palette.length] +
+                '"></span><span class="name">' +
+                escapeHtml(s.label) +
+                "</span>" +
+                tok +
+                '<span class="pct">' +
+                formatPiePct(s.value) +
+                "</span></div>"
+              );
+            })
+            .join("");
+        }
+
+        function renderOnDemandPeriodBox(session) {
+          if (!onDemandPeriodBox) return;
+          const u = session && session.currentPeriodUsage;
+          if (u && u.ok && u.amountUsd != null && u.amountUsd > 0) {
+            onDemandPeriodBox.hidden = false;
+            const L = "<strong>On-demand:</strong> ";
+            const usedStr = fmtMoney(u.amountUsd);
+            const cap =
+              u.limitUsd != null && Number.isFinite(u.limitUsd) ? u.limitUsd : null;
+            const rem =
+              u.remainingUsd != null && Number.isFinite(u.remainingUsd) ? u.remainingUsd : null;
+            let body = usedStr + " used";
+            if (cap != null) {
+              body += " · " + fmtMoney(cap) + " cap";
+              if (rem != null) {
+                if (rem >= 0) {
+                  body += " · " + fmtMoney(rem) + " available";
+                } else {
+                  body += " · " + fmtMoney(-rem) + " over cap";
+                }
+              }
+            }
+            let stClass = "pie-status--green";
+            if (rem != null && rem < 0) {
+              stClass = "pie-status--red";
+            } else if (cap != null && rem != null && rem >= 0) {
+              const r = cap > 0 ? rem / cap : 1;
+              if (rem === 0 || r < 0.1) {
+                stClass = "pie-status--amber";
+              }
+            }
+            onDemandPeriodBox.className = "pie-status " + stClass + " on-demand-below-pies";
+            onDemandPeriodBox.innerHTML = L + body;
+          } else {
+            onDemandPeriodBox.hidden = true;
+            onDemandPeriodBox.innerHTML = "";
+            onDemandPeriodBox.className = "pie-status pie-status--muted on-demand-below-pies";
+          }
+        }
+
+        function renderSession(session, statsForPies) {
+          const st = statsForPies != null ? statsForPies : lastStatsRef;
+          if (!session) {
+            updateHeaderUserName(null);
+            drawPieCanvas(pieAuto, [], PIE_AUTO_COLORS, remainingPctForPieCenter(null, st && st.autoPercent));
+            drawPieCanvas(pieApi, [], PIE_API_COLORS, remainingPctForPieCenter(null, st && st.apiPercent));
+            pieAutoLeg.innerHTML = "";
+            pieApiLeg.innerHTML = "";
+            renderOnDemandPeriodBox(null);
+            return;
+          }
+
+          const pies = session.billingPies;
+          if (pies && pies.auto && pies.auto.length) {
+            drawPieCanvas(
+              pieAuto,
+              pies.auto,
+              PIE_AUTO_COLORS,
+              remainingPctForPieCenter(pies.auto, st && st.autoPercent),
+            );
+            renderPieLegend(pieAutoLeg, pies.auto, PIE_AUTO_COLORS);
+          } else {
+            drawPieCanvas(pieAuto, [], PIE_AUTO_COLORS, remainingPctForPieCenter(null, st && st.autoPercent));
+            pieAutoLeg.innerHTML =
+              '<p class="muted" style="margin:0;font-size:8px">No Auto/Composer data.</p>';
+          }
+
+          if (pies && pies.api && pies.api.length) {
+            drawPieCanvas(
+              pieApi,
+              pies.api,
+              PIE_API_COLORS,
+              remainingPctForPieCenter(pies.api, st && st.apiPercent),
+            );
+            renderPieLegend(pieApiLeg, pies.api, PIE_API_COLORS);
+          } else {
+            drawPieCanvas(pieApi, [], PIE_API_COLORS, remainingPctForPieCenter(null, st && st.apiPercent));
+            pieApiLeg.innerHTML = '<p class="muted" style="margin:0;font-size:8px">No API data.</p>';
+          }
+
+          renderOnDemandPeriodBox(session);
+        }
+
+        function applyFullDashboard(payload) {
+          try {
+            if (payload) {
+              currentSession = payload.session;
+            }
+            lastAggregatedUsage = payload && payload.aggregatedUsage;
+            updateHeaderUserName(payload && payload.session);
+            redrawChart(payload || {});
+            renderSession(payload && payload.session, payload && payload.stats);
+            updateHeaderAuth();
+            if (lastPricingPayload && lastPricingPayload.ok && lastPricingPayload.data) {
+              paintPricingTable(lastPricingPayload.data, lastAggregatedUsage);
+            }
+          } catch (e) {
+            console.error("cursor stats dashboard:", e);
+          }
+        }
+
+        function clearPaceStatusBoxes() {
+          if (!pieAutoStatus || !pieApiStatus) return;
+          pieAutoStatus.innerHTML = "";
+          pieApiStatus.innerHTML = "";
+          pieAutoStatus.hidden = true;
+          pieApiStatus.hidden = true;
+          pieAutoStatus.className = "pie-status pie-status--muted";
+          pieApiStatus.className = "pie-status pie-status--muted";
+        }
+
+        function updateChartInsights(payload) {
+          if (!pieAutoStatus || !pieApiStatus) return;
+
+          const billing = payload && payload.billing;
+          const stats = payload && payload.stats;
+          if (!billing || !stats || stats.loggedIn === false) {
+            clearPaceStatusBoxes();
+            return;
+          }
+          if (stats.ok === false) {
+            clearPaceStatusBoxes();
+            return;
+          }
+
+          const D = Math.max(1, billing.daysTotal);
+          const curD = Math.max(0, billing.currentDayIndex);
+          const pace = (curD / D) * 100;
+          const periodEnd = new Date(
+            billing.periodEnd != null
+              ? typeof billing.periodEnd === "string"
+                ? billing.periodEnd
+                : billing.periodEnd
+              : billing.periodEndKey + "T12:00:00",
+          );
+          const endOk = !Number.isNaN(periodEnd.getTime());
+
+          function runoutLine(usagePct) {
+            if (usagePct == null) return null;
+            if (usagePct >= 100) {
+              return "at or over 100% of this pool — the allowance is exhausted until reset.";
+            }
+            if (usagePct < pace) return null;
+            const daysElapsed = curD + 1;
+            const rate = usagePct / Math.max(1, daysElapsed);
+            if (rate < 0.01) return null;
+            const daysToFull = (100 - usagePct) / rate;
+            if (!Number.isFinite(daysToFull) || daysToFull < 0 || daysToFull > 400) return null;
+            const when = new Date();
+            when.setDate(when.getDate() + Math.ceil(daysToFull));
+            const fmt = when.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+            const beforeReset = Math.round((periodEnd - when) / 86400000);
+            if (endOk && when.getTime() < periodEnd.getTime() - 8 * 3600000) {
+              return `expected to run out by ${fmt}, ${beforeReset} day${
+                beforeReset === 1 ? "" : "s"
+              } before monthly reset`;
+            }
+            if (endOk && when.getTime() > periodEnd.getTime() + 8 * 3600000) {
+              return `linear trend can reach 100% after this cycle’s reset (~${fmt})`;
+            }
+            return `expected to run out by ${fmt}`;
+          }
+
+          function setPoolPaceBox(el, label, usagePct) {
+            const L = "<strong>" + escapeHtml(label) + ":</strong> ";
+            if (usagePct == null) {
+              el.className = "pie-status pie-status--muted";
+              el.hidden = false;
+              el.innerHTML = L + "no data for this period.";
+              return;
+            }
+            if (usagePct >= 100) {
+              const msg = runoutLine(usagePct) || "over 100% of this pool’s allowance";
+              el.className = "pie-status pie-status--red";
+              el.hidden = false;
+              el.innerHTML = L + escapeHtml(msg);
+              return;
+            }
+            const diff = usagePct - pace;
+            if (Math.abs(diff) < 0.4) {
+              el.className = "pie-status pie-status--green";
+              el.hidden = false;
+              el.innerHTML = L + "on the even monthly pace (" + Math.round(usagePct) + "% used).";
+              return;
+            }
+            if (diff < 0) {
+              el.className = "pie-status pie-status--green";
+              el.hidden = false;
+              el.innerHTML = L + Math.round(Math.abs(diff)) + "% under the even monthly pace!";
+              return;
+            }
+            const ro = runoutLine(usagePct);
+            el.className = "pie-status pie-status--amber";
+            el.hidden = false;
+            const tail = Math.round(diff) + "% over the even monthly pace" + (ro ? " — " + ro : "") + ".";
+            el.innerHTML = L + escapeHtml(tail);
+          }
+
+          setPoolPaceBox(pieAutoStatus, "Auto + Composer", stats.autoPercent);
+          setPoolPaceBox(pieApiStatus, "API pool", stats.apiPercent);
+        }
+
+        /** When billing is missing, avoid "Sign in" while `/api/auth/me` succeeded but spending stats are not ready yet. */
+        function usageChartEmptyHint(payload) {
+          const stats = payload && payload.stats;
+          const session = payload && payload.session;
+          const signedInSession = !!(session && session.me && session.me.ok);
+          const signedInStats = stats && stats.loggedIn === true;
+          if (stats && stats.ok === false) {
+            return "Could not load usage for this chart.";
+          }
+          if (stats && stats.loggedIn === false) {
+            return "Sign in; stats refresh automatically when this window is open…";
+          }
+          if (signedInSession || signedInStats) {
+            return "Loading usage…";
+          }
+          return "Sign in; stats refresh automatically when this window is open…";
+        }
+
+        function drawUsageChart(canvas, payload) {
+          if (!canvas) return;
+          const ctx = canvas.getContext("2d");
+          const ct = chartTheme();
+          const dpr = window.devicePixelRatio || 1;
+          const rect = canvas.getBoundingClientRect();
+          const cw = Math.max(260, Math.floor(rect.width));
+          const ch = 100;
+          canvas.width = cw * dpr;
+          canvas.height = ch * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+          ctx.clearRect(0, 0, cw, ch);
+          ctx.fillStyle = ct.plotBg;
+          ctx.fillRect(0, 0, cw, ch);
+
+          const billing = payload && payload.billing;
+          const stats = payload && payload.stats;
+
+          if (!billing) {
+            ctx.fillStyle = ct.emptyHint;
+            ctx.font = "10px system-ui,sans-serif";
+            ctx.fillText(usageChartEmptyHint(payload), 8, 44);
+            return;
+          }
+
+          const padL = 32;
+          const padR = 6;
+          const padT = 6;
+          const padB = 18;
+          const gw = cw - padL - padR;
+          const gh = ch - padT - padB;
+          const D = Math.max(1, billing.daysTotal);
+          const curD = Math.max(0, billing.currentDayIndex);
+
+          function xOf(day) {
+            return padL + (day / D) * gw;
+          }
+          function yOf(pct) {
+            const v = Math.max(0, Math.min(115, pct));
+            return padT + gh - (v / 100) * gh;
+          }
+
+          ctx.strokeStyle = ct.grid;
+          ctx.lineWidth = 1;
+          for (const p of [0, 25, 50, 75, 100]) {
+            ctx.beginPath();
+            ctx.moveTo(padL, yOf(p));
+            ctx.lineTo(padL + gw, yOf(p));
+            ctx.stroke();
+          }
+
+          ctx.strokeStyle = ct.axis;
+          ctx.beginPath();
+          ctx.moveTo(padL, padT);
+          ctx.lineTo(padL, padT + gh);
+          ctx.lineTo(padL + gw, padT + gh);
+          ctx.stroke();
+
+          const uAuto = stats && stats.autoPercent != null ? stats.autoPercent : null;
+          const uApi = stats && stats.apiPercent != null ? stats.apiPercent : null;
+
+          function xOverageBandStart(usagePct) {
+            if (usagePct == null || !Number.isFinite(Number(usagePct))) return null;
+            const u = Number(usagePct);
+            if (u < 100 || curD < 0) return null;
+            const dCross = (100 * curD) / Math.max(u, 1e-9);
+            if (dCross > curD) return null;
+            return xOf(dCross);
+          }
+          const xBandStarts = [xOverageBandStart(uAuto), xOverageBandStart(uApi)].filter(function (x) {
+            return x != null;
+          });
+          if (xBandStarts.length) {
+            const x1 = Math.min.apply(null, xBandStarts);
+            const xR = padL + gw;
+            if (x1 < xR) {
+              ctx.fillStyle = ct.poolOverageBand;
+              ctx.fillRect(x1, padT, xR - x1, gh);
+            }
+          }
+
+          const us = payload && payload.usageSeries;
+          const aSeries = us && Array.isArray(us.auto) && us.auto.length ? us.auto : null;
+          const pSeries = us && Array.isArray(us.api) && us.api.length ? us.api : null;
+
+          function dailyDeltasFromCumulative(series) {
+            if (!series || !series.length) return null;
+            const out = [];
+            for (let d = 0; d < series.length; d++) {
+              const cur = series[d] || 0;
+              const prev = d > 0 ? series[d - 1] || 0 : 0;
+              out.push(Math.max(0, cur - prev));
+            }
+            return out;
+          }
+
+          const delA = dailyDeltasFromCumulative(aSeries);
+          const delP = dailyDeltasFromCumulative(pSeries);
+          const hasEventDeltas = (delA && delA.length > 0) || (delP && delP.length > 0);
+
+          const wSlot = gw / D;
+          const daysToDraw = Math.min(D, curD + 1);
+
+          function sumArr(a) {
+            if (!a || !a.length) return 0;
+            var s = 0;
+            for (var j = 0; j < a.length; j++) s += a[j] || 0;
+            return s;
+          }
+
+          function dailyDeltasFromLocalHistory(hist, days) {
+            function line(pool) {
+              const key = pool === "auto" ? "autoPercent" : "apiPercent";
+              const byAt = /** @type {Record<number, { at: string, v: number }>} */ ({});
+              const hl = hist && hist.length ? hist.length : 0;
+              for (let i = 0; i < hl; i++) {
+                const e = hist[i];
+                if (!e || typeof e !== "object") continue;
+                const di = e.dayIndex;
+                if (di < 0 || di >= days) continue;
+                const raw = e[key];
+                if (raw == null || !Number.isFinite(Number(raw))) continue;
+                const at = e.at != null ? String(e.at) : "";
+                const v = Number(raw);
+                if (!byAt[di] || (at > byAt[di].at)) {
+                  byAt[di] = { at, v };
+                }
+              }
+              const cum = new Array(days).fill(0);
+              let run = 0;
+              for (let d = 0; d < days; d++) {
+                if (byAt[d] != null) {
+                  run = byAt[d].v;
+                }
+                cum[d] = run;
+              }
+              const out = [];
+              for (let d = 0; d < days; d++) {
+                const cur = cum[d] ?? 0;
+                const prev = d > 0 ? cum[d - 1] : 0;
+                out.push(Math.max(0, cur - prev));
+              }
+              return out;
+            }
+            return { a: line("auto"), p: line("api") };
+          }
+
+          const histD = dailyDeltasFromLocalHistory(
+            (payload && payload.history) || [],
+            daysToDraw,
+          );
+          const nDays = Math.max(1, daysToDraw);
+          const yBottom = yOf(0);
+          const PURP = "rgba(124, 58, 237, 0.22)";
+          const BLUE = "rgba(37, 99, 235, 0.2)";
+          const REL_BAR_FRAC = 0.44;
+          const barCapPx = gh * REL_BAR_FRAC;
+          const MIN_PX = 4;
+
+          const histA = sumArr(histD.a) > 1e-9;
+          const histP = sumArr(histD.p) > 1e-9;
+          const eventA = hasEventDeltas && delA && delA.length ? sumArr(delA) : 0;
+          const eventP = hasEventDeltas && delP && delP.length ? sumArr(delP) : 0;
+          const useEvent =
+            (delA && delA.length) || (delP && delP.length) ? (eventA > 1e-6 || eventP > 1e-6) : false;
+          const useHistory = !useEvent && (histA || histP);
+
+          const perDay = [];
+          for (let d = 0; d < daysToDraw; d++) {
+            let da;
+            let dp;
+            if (useEvent) {
+              da = delA && delA[d] != null ? delA[d] : 0;
+              dp = delP && delP[d] != null ? delP[d] : 0;
+            } else if (useHistory) {
+              da = histD.a[d] != null ? histD.a[d] : 0;
+              dp = histD.p[d] != null ? histD.p[d] : 0;
+            } else {
+              da = uAuto != null ? uAuto / nDays : 0;
+              dp = uApi != null ? uApi / nDays : 0;
+            }
+            perDay.push({ da, dp });
+          }
+
+          function countDayPositive(a) {
+            if (!a || !a.length) return 0;
+            var c = 0;
+            for (var i2 = 0; i2 < a.length; i2++) {
+              if ((a[i2] || 0) > 1e-9) c += 1;
+            }
+            return c;
+          }
+          function maxArr(a) {
+            if (!a || !a.length) return 0;
+            var m = 0;
+            for (var i3 = 0; i3 < a.length; i3++) {
+              if ((a[i3] || 0) > m) m = a[i3] || 0;
+            }
+            return m;
+          }
+          /** Height ∝ (raw / max) so only the heaviest-usage day is full; zero days = no bar. No min–max — that forced identical pixels when raws were even. */
+          function heightsByMaxOnly(raw, cap) {
+            if (!raw || !raw.length) {
+              return raw.map(function () {
+                return 0;
+              });
+            }
+            const hi = maxArr(raw);
+            if (hi < 1e-12) {
+              return raw.map(function () {
+                return 0;
+              });
+            }
+            return raw.map(function (v) {
+              if ((v || 0) < 1e-12) return 0;
+              return MIN_PX + ((v / hi) * (cap - MIN_PX));
+            });
+          }
+
+          const arrA = perDay.map(function (x) {
+            return x.da;
+          });
+          const arrP = perDay.map(function (x) {
+            return x.dp;
+          });
+
+          const hA = heightsByMaxOnly(arrA, barCapPx);
+          const hP = heightsByMaxOnly(arrP, barCapPx);
+
+          for (let d = 0; d < daysToDraw; d++) {
+            const xL = xOf(d);
+            const gap = 1;
+            const halfW = Math.max(1, (wSlot - gap) / 2);
+            const ha = hA[d] || 0;
+            const hp = hP[d] || 0;
+            if (ha > 0) {
+              const t = yBottom - ha;
+              ctx.fillStyle = PURP;
+              ctx.fillRect(xL + 0.5, t, halfW - 0.5, ha);
+            }
+            if (hp > 0) {
+              const t2 = yBottom - hp;
+              ctx.fillStyle = BLUE;
+              ctx.fillRect(xL + 0.5 + halfW + gap * 0.5, t2, halfW - 0.5, hp);
+            }
+          }
+
+          ctx.strokeStyle = "rgba(37, 99, 235, 0.9)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 4]);
+          ctx.beginPath();
+          ctx.moveTo(xOf(0), yOf(0));
+          ctx.lineTo(xOf(D), yOf(100));
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          function drawLineFromZero(usagePct, color) {
+            if (usagePct == null) return;
+            const yEnd = yOf(Math.min(usagePct, 115));
+            const x0 = xOf(0);
+            const xC = xOf(curD);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(x0, yOf(0));
+            ctx.lineTo(xC, yEnd);
+            ctx.stroke();
+          }
+
+          /** Step chart: one horizontal segment per day, vertical jump on new usage (cumulative at end of day d). */
+          function drawSeriesFromApiStep(series, color) {
+            if (!series || !series.length) return;
+            const last = Math.min(curD, series.length - 1);
+            if (last < 0) return;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(xOf(0), yOf(0));
+            for (let d = 0; d <= last; d++) {
+              const s = series[d] ?? 0;
+              if (!Number.isFinite(s)) continue;
+              const yS = yOf(Math.min(s, 115));
+              const sM1 = d === 0 ? 0 : series[d - 1] ?? 0;
+              const yM1 = yOf(Math.min(sM1, 115));
+              const x = xOf(d);
+              if (d === 0) {
+                ctx.lineTo(x, yS);
+              } else {
+                ctx.lineTo(x, yM1);
+                ctx.lineTo(x, yS);
+              }
+              if (d < last) {
+                ctx.lineTo(xOf(d + 1), yS);
+              }
+            }
+            ctx.stroke();
+          }
+
+          if (aSeries) {
+            drawSeriesFromApiStep(aSeries, "#7c3aed");
+          } else {
+            drawLineFromZero(uAuto, "#7c3aed");
+          }
+          if (pSeries) {
+            drawSeriesFromApiStep(pSeries, "#2563eb");
+          } else {
+            drawLineFromZero(uApi, "#2563eb");
+          }
+
+          ctx.fillStyle = ct.label;
+          ctx.font = "8px system-ui,sans-serif";
+          ctx.fillText("0%", 2, yOf(0) + 3);
+          ctx.fillText("100%", 0, yOf(100) + 3);
+
+          function fmtShort(iso) {
+            try {
+              const d = new Date(iso + "T12:00:00");
+              return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+            } catch {
+              return "";
+            }
+          }
+
+          ctx.fillText(fmtShort(billing.periodStartKey), padL, ch - 4);
+          ctx.fillText(fmtShort(billing.periodEndKey), padL + gw - 32, ch - 4);
+          ctx.fillText("d" + (curD + 1) + "/" + D, padL + gw / 2 - 12, ch - 4);
+        }
+
+        function redrawChart(payload) {
+          const p = payload || {};
+          drawUsageChart(chartCanvas, p);
+          updateChartInsights(p);
+        }
+
+        function renderUsage(stats) {
+          if (stats && stats.ok === false) {
+            if (lastStatsRef && lastStatsRef.ok !== false && lastStatsRef.loggedIn) {
+              return;
+            }
+          }
+          lastStatsRef = stats;
+          updateHeaderAuth();
+
+          if (!stats) {
+            if (chartUsageMeta) chartUsageMeta.innerHTML = "";
+            return;
+          }
+
+          if (stats.ok === false) {
+            setBanner("err", stats.note || "Could not load usage.");
+            if (chartUsageMeta) chartUsageMeta.innerHTML = "";
+            return;
+          }
+
+          if (stats.loggedIn === false) {
+            setBanner("warn", stats.note || "Sign in, then open stats again.");
+            if (chartUsageMeta) chartUsageMeta.innerHTML = "";
+            updateHeaderAuth();
+            return;
+          }
+
+          if (stats.note) {
+            setBanner("warn", stats.note);
+          } else {
+            setBanner("", "");
+          }
+
+          const lines = [];
+
+          if (stats.resetLabel) {
+            const rel = stats.resetRelative ? " (" + stats.resetRelative + ")" : "";
+            lines.push(
+              '<div class="chart-meta-line"><span class="muted">Billing reset</span><span><strong>' +
+                escapeHtml(stats.resetLabel) +
+                "</strong>" +
+                escapeHtml(rel) +
+                "</span></div>",
+            );
+          }
+
+          const apiOnDemand =
+            currentSession &&
+            currentSession.currentPeriodUsage &&
+            currentSession.currentPeriodUsage.ok &&
+            currentSession.currentPeriodUsage.amountUsd != null &&
+            currentSession.currentPeriodUsage.amountUsd > 0;
+          if (stats.onDemand && stats.onDemand.used > 0 && !apiOnDemand) {
+            lines.push(
+              '<div class="chart-meta-line"><span class="muted">On-demand</span><span><strong>' +
+                fmtMoney(stats.onDemand.used) +
+                "</strong> / " +
+                fmtMoney(stats.onDemand.limit) +
+                "</span></div>",
+            );
+          }
+
+          if (!chartUsageMeta) return;
+
+          if (!lines.length) {
+            chartUsageMeta.innerHTML = "";
+            if (!stats.note) {
+              setBanner("warn", "Could not parse usage.");
+            }
+            return;
+          }
+
+          chartUsageMeta.innerHTML = lines.join("");
+        }
+
+        function tokenizeVersion(str) {
+          const parts = String(str)
+            .split(".")
+            .map(function (p) {
+              return parseInt(p, 10);
+            });
+          return parts.some(function (n) {
+            return Number.isNaN(n);
+          })
+            ? [0]
+            : parts;
+        }
+
+        function compareVer(a, b) {
+          const n = Math.max(a.length, b.length);
+          for (let i = 0; i < n; i++) {
+            const d = (a[i] || 0) - (b[i] || 0);
+            if (d !== 0) return d;
+          }
+          return 0;
+        }
+
+        /** Strip invisible chars / normalize whitespace for parsing stable names from scraped docs. */
+        function normalizePricingModelName(name) {
+          return String(name || "")
+            .trim()
+            .replace(/[\u200B-\u200D\uFEFF]/g, "")
+            .replace(/\s+/g, " ");
+        }
+
+        /** Leading product version in the model name (e.g. Claude 4.7 → [4,7]). */
+        function extractVersionFromModelName(name) {
+          const s = normalizePricingModelName(name);
+          let m;
+          m = s.match(/^Claude\s+([\d.]+)/i);
+          if (m) return tokenizeVersion(m[1]);
+          /* Docs sometimes render "Composer2" — allow optional gap before version digits */
+          m = s.match(/^Composer\s*([\d.]+(?:\.[\d]+)?)/i);
+          if (m) return tokenizeVersion(m[1]);
+          m = s.match(/^Gemini\s+([\d.]+(?:\.[\d]+)?)/i);
+          if (m) return tokenizeVersion(m[1]);
+          m = s.match(/^GPT-([\d.]+(?:\.[\d]+)?)/i);
+          if (m) return tokenizeVersion(m[1]);
+          m = s.match(/^Grok\s+([\d.]+(?:\.[\d]+)?)/i);
+          if (m) return tokenizeVersion(m[1]);
+          m = s.match(/^Kimi\s+K([\d.]+(?:\.[\d]+)?)/i);
+          if (m) return tokenizeVersion(m[1]);
+          return null;
+        }
+
+        /** Inferred vendor family from model name (for grouping newest-version highlights). */
+        function inferProviderFamilyFromModel(modelName) {
+          const s = normalizePricingModelName(modelName);
+          if (/^Claude\b/i.test(s)) return "Anthropic";
+          if (/^Composer\b/i.test(s)) return "Cursor";
+          if (/^GPT-/i.test(s) || /^GPT\b/i.test(s)) return "OpenAI";
+          if (/^Gemini\b/i.test(s)) return "Google";
+          if (/^Grok\b/i.test(s)) return "xAI";
+          if (/^Kimi\b/i.test(s)) return "Moonshot";
+          return "other";
+        }
+
+        /** Highlight rows whose version equals the max version within each inferred vendor family. */
+        function latestRowHighlightsByProvider(models) {
+          const byProv = new Map();
+          for (let i = 0; i < models.length; i++) {
+            const nm = normalizePricingModelName(models[i].model);
+            const prov = inferProviderFamilyFromModel(nm);
+            const ver = extractVersionFromModelName(nm);
+            if (!ver) continue;
+            if (!byProv.has(prov)) byProv.set(prov, []);
+            byProv.get(prov).push({ i: i, ver: ver });
+          }
+          const purple = new Set();
+          const blue = new Set();
+          for (const [prov, entries] of byProv.entries()) {
+            if (!entries.length) continue;
+            let maxVer = entries[0].ver;
+            for (let k = 1; k < entries.length; k++) {
+              if (compareVer(entries[k].ver, maxVer) > 0) maxVer = entries[k].ver;
+            }
+            for (let j = 0; j < entries.length; j++) {
+              const { i, ver } = entries[j];
+              if (compareVer(ver, maxVer) !== 0) continue;
+              /* Purple = Composer/Cursor pool rows — must match inferProviderFamilyFromModel bucket */
+              if (prov === "Cursor") purple.add(i);
+              else blue.add(i);
+            }
+          }
+          return { purple: purple, blue: blue };
+        }
+
+        function pricingNumForSort(v) {
+          if (v == null || v === "—") return null;
+          const n = Number(v);
+          return Number.isFinite(n) ? n : null;
+        }
+
+        /** @param {number | null | undefined} v */
+        function formatPeriodUsageUsd(v) {
+          if (v == null || !Number.isFinite(v)) return "—";
+          return (
+            "$" +
+            v.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })
+          );
+        }
+
+        function buildPricingRowList(d, agg) {
+          const list = [];
+          const auto = d.autoPoolUsdPerMillion;
+          if (auto) {
+            let usageVal = null;
+            if (agg && agg.ok && typeof agg.autoPoolUsd === "number" && Number.isFinite(agg.autoPoolUsd)) {
+              usageVal = agg.autoPoolUsd;
+            }
+            list.push({
+              kind: "auto",
+              model: "Auto",
+              inVal: auto.inputCacheWrite,
+              outVal: auto.output,
+              modelIndex: null,
+              usageVal: usageVal,
+            });
+          }
+          const models = d.models || [];
+          for (let i = 0; i < models.length; i++) {
+            const m = models[i];
+            let usageVal = null;
+            if (agg && agg.ok && Array.isArray(agg.modelUsd) && agg.modelUsd[i] != null) {
+              const u = agg.modelUsd[i];
+              usageVal = typeof u === "number" && Number.isFinite(u) ? u : null;
+            }
+            list.push({
+              kind: "model",
+              model: m.model,
+              inVal: m.input,
+              outVal: m.output,
+              modelIndex: i,
+              usageVal: usageVal,
+            });
+          }
+          return list;
+        }
+
+        function comparePricingRows(a, b, key, dir) {
+          let cmp = 0;
+          if (key === "model") {
+            cmp = String(a.model).localeCompare(String(b.model), undefined, { sensitivity: "base" });
+          } else if (key === "in") {
+            const na = pricingNumForSort(a.inVal);
+            const nb = pricingNumForSort(b.inVal);
+            if (na == null && nb == null) cmp = 0;
+            else if (na == null) cmp = 1;
+            else if (nb == null) cmp = -1;
+            else cmp = na - nb;
+          } else if (key === "out") {
+            const na = pricingNumForSort(a.outVal);
+            const nb = pricingNumForSort(b.outVal);
+            if (na == null && nb == null) cmp = 0;
+            else if (na == null) cmp = 1;
+            else if (nb == null) cmp = -1;
+            else cmp = na - nb;
+          } else if (key === "usage") {
+            const na =
+              a.usageVal != null && Number.isFinite(a.usageVal)
+                ? a.usageVal
+                : null;
+            const nb =
+              b.usageVal != null && Number.isFinite(b.usageVal)
+                ? b.usageVal
+                : null;
+            if (na == null && nb == null) cmp = 0;
+            else if (na == null) cmp = 1;
+            else if (nb == null) cmp = -1;
+            else cmp = na - nb;
+          }
+          return dir * cmp;
+        }
+
+        function isPricingRowHighlighted(row, purple, blue) {
+          if (row.kind === "auto") return true;
+          if (row.modelIndex == null) return false;
+          return purple.has(row.modelIndex) || blue.has(row.modelIndex);
+        }
+
+        function compareByModelVersionThenName(a, b) {
+          const va = extractVersionFromModelName(a.model);
+          const vb = extractVersionFromModelName(b.model);
+          if (va == null && vb == null) {
+            return String(a.model).localeCompare(String(b.model), undefined, { sensitivity: "base" });
+          }
+          if (va == null) return 1;
+          if (vb == null) return -1;
+          const c = compareVer(vb, va);
+          if (c !== 0) return c;
+          return String(a.model).localeCompare(String(b.model), undefined, { sensitivity: "base" });
+        }
+
+        function comparePricingRowsModelNewest(a, b, purple, blue) {
+          const ha = isPricingRowHighlighted(a, purple, blue);
+          const hb = isPricingRowHighlighted(b, purple, blue);
+          if (ha !== hb) return ha ? -1 : 1;
+          return compareByModelVersionThenName(a, b);
+        }
+
+        function updatePricingSortHeaders() {
+          if (!modelsTable) return;
+          const ths = modelsTable.querySelectorAll("thead th[data-sort]");
+          for (let t = 0; t < ths.length; t++) {
+            const th = ths[t];
+            const col = th.getAttribute("data-sort");
+            th.classList.remove("th-sort--active", "th-sort--asc", "th-sort--desc", "th-sort--newest");
+            th.removeAttribute("title");
+            if (pricingSortKey && col === pricingSortKey) {
+              if (col === "model" && pricingModelCycle === 2) {
+                th.classList.add("th-sort--active", "th-sort--newest");
+                th.setAttribute("aria-sort", "other");
+                th.title = "Newest: highlighted rows first, then by version in the name";
+              } else {
+                th.classList.add("th-sort--active");
+                th.classList.add(pricingSortDir === 1 ? "th-sort--asc" : "th-sort--desc");
+                th.setAttribute("aria-sort", pricingSortDir === 1 ? "ascending" : "descending");
+              }
+            } else {
+              th.setAttribute("aria-sort", "none");
+            }
+          }
+        }
+
+        function applyPricingSortColumn(col) {
+          if (col === "model") {
+            if (pricingSortKey !== "model") {
+              pricingSortKey = "model";
+              pricingModelCycle = 0;
+              pricingSortDir = 1;
+            } else {
+              pricingModelCycle = (pricingModelCycle + 1) % 3;
+              if (pricingModelCycle === 0) pricingSortDir = 1;
+              else if (pricingModelCycle === 1) pricingSortDir = -1;
+            }
+          } else if (col === "in" || col === "out" || col === "usage") {
+            pricingModelCycle = 0;
+            if (col === pricingSortKey) {
+              pricingSortDir *= -1;
+            } else {
+              pricingSortKey = col;
+              pricingSortDir = -1;
+            }
+          }
+          if (lastPricingPayload && lastPricingPayload.ok && lastPricingPayload.data) {
+            paintPricingTable(lastPricingPayload.data, lastAggregatedUsage);
+          }
+        }
+
+        function paintPricingTable(d, agg) {
+          if (!modelsTbody) return;
+          const models = d.models || [];
+          const { purple, blue } = latestRowHighlightsByProvider(models);
+          const rows = buildPricingRowList(d, agg);
+          if (pricingSortKey) {
+            if (pricingSortKey === "model" && pricingModelCycle === 2) {
+              rows.sort(function (a, b) {
+                return comparePricingRowsModelNewest(a, b, purple, blue);
+              });
+            } else if (pricingSortKey === "model") {
+              rows.sort(function (a, b) {
+                return comparePricingRows(a, b, "model", pricingModelCycle === 0 ? 1 : -1);
+              });
+            } else {
+              rows.sort(function (a, b) {
+                return comparePricingRows(a, b, pricingSortKey, pricingSortDir);
+              });
+            }
+          }
+          modelsTbody.innerHTML = "";
+          const aggOk = agg && agg.ok;
+          let sumSpendUsd = 0;
+          if (aggOk) {
+            for (let s = 0; s < rows.length; s++) {
+              const u = rows[s].usageVal;
+              if (u != null && Number.isFinite(u) && u > 0) sumSpendUsd += u;
+            }
+          }
+          for (let r = 0; r < rows.length; r++) {
+            const row = rows[r];
+            const tr = document.createElement("tr");
+            if (row.kind === "auto") {
+              tr.className = "row-latest-purple";
+            } else if (row.modelIndex != null) {
+              const i = row.modelIndex;
+              if (blue.has(i)) tr.className = "row-latest-blue";
+              else if (purple.has(i)) tr.className = "row-latest-purple";
+            }
+            let pctOfTotal = 0;
+            if (
+              aggOk &&
+              sumSpendUsd > 0 &&
+              row.usageVal != null &&
+              Number.isFinite(row.usageVal) &&
+              row.usageVal >= 0
+            ) {
+              pctOfTotal = Math.min(100, (row.usageVal / sumSpendUsd) * 100);
+            }
+            if (aggOk && sumSpendUsd > 0 && pctOfTotal > 0.0005) {
+              tr.classList.add("pricing-row--meter");
+              tr.style.setProperty("--usage-meter-pct", pctOfTotal.toFixed(3) + "%");
+              let strong = "var(--usage-meter-neutral-strong)";
+              let soft = "transparent";
+              if (row.kind === "auto") {
+                strong = "var(--usage-meter-purple-strong)";
+                soft = "var(--row-latest-purple)";
+              } else if (row.modelIndex != null && blue.has(row.modelIndex)) {
+                strong = "var(--usage-meter-blue-strong)";
+                soft = "var(--row-latest-blue)";
+              } else if (row.modelIndex != null && purple.has(row.modelIndex)) {
+                strong = "var(--usage-meter-purple-strong)";
+                soft = "var(--row-latest-purple)";
+              }
+              tr.style.setProperty("--usage-meter-strong", strong);
+              tr.style.setProperty("--usage-meter-soft", soft);
+            }
+            tr.innerHTML =
+              "<td>" +
+              escapeHtml(row.model) +
+              '</td><td class="num">' +
+              (row.inVal ?? "—") +
+              '</td><td class="num">' +
+              (row.outVal ?? "—") +
+              '</td><td class="num">' +
+              formatPeriodUsageUsd(row.usageVal) +
+              "</td>";
+            modelsTbody.appendChild(tr);
+          }
+          updatePricingSortHeaders();
+        }
+
+        function renderPricing(pr) {
+          if (!pricingStatus) return;
+
+          if (!pr || !pr.ok || !pr.data) {
+            lastPricingPayload = pr;
+            pricingStatus.hidden = false;
+            pricingStatus.textContent =
+              (pr && pr.error) ||
+              "Pricing unavailable. Check the main-process terminal for [model-pricing] logs.";
+            if (modelsTbody) modelsTbody.innerHTML = "";
+            updatePricingSortHeaders();
+            return;
+          }
+
+          lastPricingPayload = pr;
+          pricingStatus.hidden = true;
+          pricingStatus.textContent = "";
+          paintPricingTable(pr.data, lastAggregatedUsage);
+        }
+
+        if (modelsTable) {
+          const sortHead = modelsTable.querySelector("thead");
+          if (sortHead) {
+            sortHead.addEventListener("click", function (e) {
+              const t = e.target;
+              const th = t && t.closest ? t.closest("th[data-sort]") : null;
+              if (!th || !modelsTable.contains(th)) return;
+              e.preventDefault();
+              applyPricingSortColumn(th.getAttribute("data-sort"));
+            });
+            sortHead.addEventListener("keydown", function (e) {
+              if (e.key !== "Enter" && e.key !== " ") return;
+              const t = e.target;
+              const th = t && t.closest ? t.closest("th[data-sort]") : null;
+              if (!th || !modelsTable.contains(th)) return;
+              e.preventDefault();
+              applyPricingSortColumn(th.getAttribute("data-sort"));
+            });
+          }
+        }
+
+        async function loadPricing() {
+          const pr = await cw.getPricing();
+          renderPricing(pr);
+        }
+
+        btnSignin.addEventListener("click", async function () {
+          btnSignin.disabled = true;
+          try {
+            await cw.signIn();
+            setBanner("warn", "Complete sign-in in the browser; stats will update when you close that window.");
+          } finally {
+            btnSignin.disabled = false;
+          }
+        });
+
+        cw.onStats(function (stats) {
+          renderUsage(stats);
+        });
+
+        cw.onChart(applyFullDashboard);
+
+        cw.onSession(function (sess) {
+          currentSession = sess;
+          updateHeaderUserName(sess);
+          renderSession(sess, lastStatsRef);
+          updateHeaderAuth();
+        });
+
+        cw.onLoginClosed(function () {
+          setBanner("warn", "Session updated. Pulling latest…");
+        });
+
+        linkSpending.addEventListener("click", function (e) {
+          e.preventDefault();
+          cw.openExternal(SPENDING_URL);
+        });
+        linkDocs.addEventListener("click", function (e) {
+          e.preventDefault();
+          cw.openExternal(DOCS_URL);
+        });
+        linkFontana.addEventListener("click", function (e) {
+          e.preventDefault();
+          cw.openExternal(FONTANA_URL);
+        });
+
+        if (btnTheme) {
+          btnTheme.addEventListener("click", function (e) {
+            e.preventDefault();
+            toggleTheme();
+          });
+        }
+        try {
+          window
+            .matchMedia("(prefers-color-scheme: dark)")
+            .addEventListener("change", function () {
+              if (userTheme == null) applyTheme(true);
+            });
+        } catch (e) {}
+
+        applyTheme(false);
+
+        loadPricing();
+        cw.getLastStats().then(function (s) {
+          if (s) {
+            lastStatsRef = s;
+            renderUsage(s);
+          } else {
+            lastStatsRef = s;
+            updateHeaderAuth();
+          }
+        });
+        cw.getSession().then(function (s) {
+          if (s != null) {
+            currentSession = s;
+            renderSession(s, lastStatsRef);
+            updateHeaderAuth();
+          }
+        });
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            cw.getChartData().then(function (chart) {
+              if (chart && chart.session != null) currentSession = chart.session;
+              applyFullDashboard(chart);
+            });
+          });
+        });
+
+        window.addEventListener("resize", function () {
+          cw.getChartData().then(applyFullDashboard);
+        });
+      })();
+    </script>
+  </body>
+</html>
