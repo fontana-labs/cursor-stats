@@ -6,11 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-04-28
+
+### Client
+
+- README **Install** section is a compact three-column table with release links; removed the extra “prebuilt binaries” sentence above it.
+
 ### Changed
 
-- Moved application sources under `src/` (`src/main`, `src/renderer`) and documented layout in `docs/ARCHITECTURE.md`
-- Main process entry is now `src/main/index.js` (`package.json` `"main"`)
-- **Release** workflow runs on every push to `main` and publishes installers with tag `v<version>-build.<run_number>` (from `package.json` + GitHub Actions run id)
+- **Release** workflow runs on every push to `main`, publishes installers under tag `v<version>-build.<run_number>`, queues concurrent runs, and marks the new GitHub release as latest.
+- Linux **deb** packaging: `package.json` **author** includes **email** (electron-builder maintainer field); contact set to **admin@fontana-ai.com**.
 
 ## [0.1.0] - 2026-04-27
 
@@ -20,4 +25,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cross-platform packaging via electron-builder (macOS, Windows, Linux)
 - GitHub Actions workflows for CI and releases on push to `main`
 
+[0.1.1]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.0]: https://github.com/fontana-labs/cursor-stats/releases/tag/v0.1.0
