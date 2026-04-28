@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - README **Install** table: Windows, macOS, and Linux icons use fixed **40×40** HTML `<img>` tags so SVGs from jsDelivr no longer render at intrinsic (oversized) dimensions.
 
+### Fixed
+
+- **Linux CI:** `linux.artifactName` uses literal **`cursor-stats-${version}-${arch}.${ext}`** — **`${executableName}`** is not a supported macro in that electron-builder template.
+
 ## [0.1.3] - 2026-04-28
 
 ### Client
