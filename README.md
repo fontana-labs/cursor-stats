@@ -8,7 +8,7 @@
 
 | Windows | macOS | Linux |
 |:-------:|:-----:|:-----:|
-| [![Windows](https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/windows11/windows11-original.svg)](https://github.com/fontana-labs/cursor-stats/releases) | [![macOS](https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/apple/apple-original.svg)](https://github.com/fontana-labs/cursor-stats/releases) | [![Linux](https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/linux/linux-original.svg)](https://github.com/fontana-labs/cursor-stats/releases) |
+| [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/windows11/windows11-original.svg" alt="Windows" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases) | [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/apple/apple-original.svg" alt="macOS" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases) | [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/linux/linux-original.svg" alt="Linux" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases) |
 | **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** | **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** | **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** |
 | NSIS **Setup** (`.exe`) or **portable** `.exe` | **DMG** or **ZIP** | **AppImage** or **deb** |
 

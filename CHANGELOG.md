@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-04-28
+
+### Changed
+
+- README **Install** table: Windows, macOS, and Linux icons use fixed **40×40** HTML `<img>` tags so SVGs from jsDelivr no longer render at intrinsic (oversized) dimensions.
+
 ## [0.1.3] - 2026-04-28
 
 ### Client
@@ -46,6 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cross-platform packaging via electron-builder (macOS, Windows, Linux)
 - GitHub Actions workflows for CI and releases on push to `main`
 
+[0.1.4]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.3]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.2]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.1]: https://github.com/fontana-labs/cursor-stats/releases
