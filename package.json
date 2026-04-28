@@ -2,7 +2,10 @@
   "name": "@fontana-labs/cursor-stats",
   "version": "0.1.0",
   "description": "Open-source cross-platform system tray widget for Cursor usage and billing stats",
-  "author": "Fontana Labs",
+  "author": {
+    "name": "Fontana Labs",
+    "email": "opensource@fontana-labs.com"
+  },
   "license": "MIT",
   "main": "src/main/index.js",
   "repository": {
