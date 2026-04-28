@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-04-28
+
+### Added
+
+- Cursor custom command **`logthis`** (`.cursor/commands/logthis.md`) for release-style changelog and semver updates, aligned with Fontana sibling repos.
+
 ## [0.1.1] - 2026-04-28
 
 ### Client
@@ -25,5 +31,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cross-platform packaging via electron-builder (macOS, Windows, Linux)
 - GitHub Actions workflows for CI and releases on push to `main`
 
+[0.1.2]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.1]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.0]: https://github.com/fontana-labs/cursor-stats/releases/tag/v0.1.0
