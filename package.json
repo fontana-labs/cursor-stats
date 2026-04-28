@@ -54,6 +54,9 @@
     ],
     "mac": {
       "category": "public.app-category.utilities",
+      "arch": [
+        "universal"
+      ],
       "target": [
         "dmg",
         "zip"

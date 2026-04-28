@@ -12,6 +12,20 @@
 | **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** | **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** | **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** |
 | NSIS **Setup** (`.exe`) or **portable** `.exe` | **DMG** or **ZIP** | **AppImage** or **deb** |
 
+### macOS (prebuilt from GitHub)
+
+1. On [Releases](https://github.com/fontana-labs/cursor-stats/releases), open the **latest** release and download an asset named like **`Cursor stats-…dmg`** or **`…zip`** — not **`.exe`** (Windows), **`.AppImage`**, or **`.deb`**.
+2. CI builds are **not signed or notarized**, so **Gatekeeper** may block the first launch:
+   - **System Settings** → **Privacy & Security** → find the message about the app → **Open Anyway**, or  
+   - **Control-click** the app → **Open** → confirm **Open**.
+3. If macOS says the app is “damaged” or still won’t open, clear quarantine (adjust the path if you put the app elsewhere):
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Cursor stats.app"
+```
+
+Prebuilt macOS apps are **universal** (Apple Silicon and Intel) so one DMG/ZIP works on both.
+
 ### From source
 
 - **Node.js 20+** and npm
