@@ -54,12 +54,19 @@
     ],
     "mac": {
       "category": "public.app-category.utilities",
-      "arch": [
-        "universal"
-      ],
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
       ]
     },
     "win": {
