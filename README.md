@@ -6,29 +6,23 @@
 
 ## Screenshots
 
-Dashboard (**light** and **dark**):
+<p align="center"><strong>System Tray</strong><br/><a href="./docs/Screenshot%202026-04-28%20at%2016.55.30.png"><img src="./docs/Screenshot%202026-04-28%20at%2016.55.30.png" width="280" alt="Cursor stats tray icon and status" /></a></p>
 
 <table>
 <tr>
-<td width="50%" valign="top" align="center"><strong>Light</strong><br /><a href="./docs/Screenshot%202026-04-28%20at%2017.43.44.png"><img src="./docs/Screenshot%202026-04-28%20at%2017.43.44.png" width="300" alt="Cursor stats dashboard — light theme" /></a></td>
-<td width="50%" valign="top" align="center"><strong>Dark</strong><br /><a href="./docs/Screenshot%202026-04-28%20at%2017.43.48.png"><img src="./docs/Screenshot%202026-04-28%20at%2017.43.48.png" width="300" alt="Cursor stats dashboard — dark theme" /></a></td>
+<td width="50%" valign="top" align="center"><a href="./docs/Screenshot%202026-04-28%20at%2017.43.44.png"><img src="./docs/Screenshot%202026-04-28%20at%2017.43.44.png" width="300" alt="Cursor stats dashboard — light theme" /></a></td>
+<td width="50%" valign="top" align="center"><a href="./docs/Screenshot%202026-04-28%20at%2017.43.48.png"><img src="./docs/Screenshot%202026-04-28%20at%2017.43.48.png" width="300" alt="Cursor stats dashboard — dark theme" /></a></td>
 </tr>
 </table>
 
-<p align="center"><strong>Tray</strong> (status detail)<br /><a href="./docs/Screenshot%202026-04-28%20at%2016.55.30.png"><img src="./docs/Screenshot%202026-04-28%20at%2016.55.30.png" width="280" alt="Cursor stats tray icon and status" /></a></p>
 
 ## Install
 
-Prebuilt binaries for **[v0.1.4-build.10](https://github.com/fontana-labs/cursor-stats/releases/tag/v0.1.4-build.10)** (direct links; **[all releases →](https://github.com/fontana-labs/cursor-stats/releases)** for other versions):
-
-| Windows | macOS (universal) | Linux |
-|:-------:|:-----------------:|:-----:|
-| [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/windows11/windows11-original.svg" alt="Windows" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats.Setup.0.1.4.exe) | [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/apple/apple-original.svg" alt="macOS" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats-0.1.4-universal.dmg) | [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/linux/linux-original.svg" alt="Linux" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/cursor-stats-0.1.4-x86_64.AppImage) |
-| **[Installer →](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats.Setup.0.1.4.exe)** · [Portable `.exe`](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats.0.1.4.exe) | **[DMG →](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats-0.1.4-universal.dmg)** · [ZIP](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats-0.1.4-universal-mac.zip) | **[AppImage →](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/cursor-stats-0.1.4-x86_64.AppImage)** · [deb](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/cursor-stats-0.1.4-amd64.deb) |
+Prebuilt installers are on GitHub: **[All Releases →](https://github.com/fontana-labs/cursor-stats/releases/latest)** (always the **latest** published release). Under **Assets**, choose the file for your OS — e.g. **`.dmg`** or **`.zip`** on macOS, **`.exe`** on Windows, **`.AppImage`** or **`.deb`** on Linux.
 
 ### macOS (prebuilt from GitHub)
 
-1. Download the **DMG** or **ZIP** above — not **`.exe`**, **`.AppImage`**, or **`.deb`**.
+1. On the **latest release** page, download a **DMG** or **ZIP** — not **`.exe`**, **`.AppImage`**, or **`.deb`**.
 2. CI builds are **not signed or notarized**, so **Gatekeeper** may block the first launch:
    - **System Settings** → **Privacy & Security** → find the message about the app → **Open Anyway**, or  
    - **Control-click** the app → **Open** → confirm **Open**.
