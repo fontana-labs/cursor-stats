@@ -31,6 +31,7 @@ const {
 } = require("./lib/model-pricing-fetch.js");
 const { extractBillingPies } = require("./lib/parse-billing-breakdown.js");
 const { buildUsageEventSeriesForChart } = require("./lib/usage-events-aggregate.js");
+const { checkForAppUpdate } = require("./lib/app-update-check.js");
 
 const CURSOR_PARTITION = "persist:cursor-widget";
 const SPENDING_URL = "https://cursor.com/dashboard/spending";
@@ -784,6 +785,11 @@ app.whenReady().then(() => {
     }
     await shell.openExternal(url);
     return { ok: true };
+  });
+
+  ipcMain.handle("cursor:check-app-update", async (_event, opts) => {
+    const force = opts && typeof opts === "object" && opts.force === true;
+    return checkForAppUpdate(app, { force });
   });
 
   createTray();

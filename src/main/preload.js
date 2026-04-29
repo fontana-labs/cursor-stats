@@ -45,4 +45,6 @@ contextBridge.exposeInMainWorld("cursorWidget", {
   },
 
   openExternal: (url) => ipcRenderer.invoke("cursor:open-external", url),
+
+  checkAppUpdate: (opts) => ipcRenderer.invoke("cursor:check-app-update", opts),
 });

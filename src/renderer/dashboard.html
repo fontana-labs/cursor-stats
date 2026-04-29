@@ -59,6 +59,10 @@
         --err-bg: #fee2e2;
         --err-fg: #991b1b;
         --err-border: #fecaca;
+        --info-bg: #eff6ff;
+        --info-fg: #1e3a8a;
+        --info-border: #93c5fd;
+        --info-link: #1d4ed8;
         --pie-cap: #3f3f46;
         --leg-pct: #52525b;
         --st-green-bg: #ecfdf5;
@@ -114,6 +118,10 @@
         --err-bg: #450a0a;
         --err-fg: #fecaca;
         --err-border: #991b1b;
+        --info-bg: #172554;
+        --info-fg: #bfdbfe;
+        --info-border: #2563eb;
+        --info-link: #93c5fd;
         --pie-cap: #d4d4d8;
         --leg-pct: #a1a1aa;
         --st-green-bg: #052e1a;
@@ -424,6 +432,16 @@
         color: var(--err-fg);
         border: 1px solid var(--err-border);
       }
+      .banner.info {
+        background: var(--info-bg);
+        color: var(--info-fg);
+        border: 1px solid var(--info-border);
+      }
+      .banner.info a {
+        color: var(--info-link);
+        font-weight: 600;
+        margin-left: 4px;
+      }
       .table-wrap {
         overflow: auto;
         border: 1px solid var(--border);
@@ -698,6 +716,7 @@
     </header>
     <main id="main-body">
       <div id="banner" class="banner" hidden></div>
+      <div id="banner-update" class="banner info" hidden role="status" aria-live="polite"></div>
       <div id="view-usage" class="view-panel">
         <div class="chart-wrap">
           <div class="chart-wrap__head">
@@ -807,6 +826,7 @@
         };
 
         const banner = document.getElementById("banner");
+        const bannerUpdate = document.getElementById("banner-update");
         const chartUsageMeta = document.getElementById("chart-usage-meta");
         const pricingStatus = document.getElementById("pricing-status");
         const modelsTable = document.getElementById("models-table");
@@ -955,6 +975,44 @@
           banner.hidden = false;
           banner.textContent = text;
           banner.className = "banner " + type;
+        }
+
+        function hideUpdateBanner() {
+          if (!bannerUpdate) return;
+          bannerUpdate.hidden = true;
+          bannerUpdate.innerHTML = "";
+        }
+
+        function showUpdateBanner(latestVersion, releaseUrl) {
+          if (!bannerUpdate || cw.openExternal == null) return;
+          bannerUpdate.hidden = false;
+          bannerUpdate.innerHTML = "";
+          var msg = document.createElement("span");
+          msg.textContent = "A new version is available (" + String(latestVersion) + ").";
+          bannerUpdate.appendChild(msg);
+          var a = document.createElement("a");
+          a.href = "#";
+          a.textContent = "Download";
+          a.addEventListener("click", function (e) {
+            e.preventDefault();
+            cw.openExternal(releaseUrl);
+          });
+          bannerUpdate.appendChild(a);
+        }
+
+        function maybeFetchAppUpdate() {
+          if (typeof cw.checkAppUpdate !== "function") return;
+          cw.checkAppUpdate()
+            .then(function (r) {
+              if (r && r.updateAvailable === true && r.releaseUrl && r.latestVersion != null && r.latestVersion !== "") {
+                showUpdateBanner(r.latestVersion, r.releaseUrl);
+              } else {
+                hideUpdateBanner();
+              }
+            })
+            .catch(function () {
+              hideUpdateBanner();
+            });
         }
 
         function fmtMoney(n) {
@@ -2347,6 +2405,7 @@
               if (chart && chart.session != null) currentSession = chart.session;
               applyFullDashboard(chart);
             });
+            maybeFetchAppUpdate();
           });
         });
 

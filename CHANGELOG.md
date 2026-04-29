@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-04-29
+
+### Client
+
+- Packaged app checks GitHub Releases for a newer version than the running build and shows an **info banner** on the dashboard with a **Download** link (opens the release page in the browser). Skips the check in development; caches the result for 24 hours.
+
 ## [0.1.4] - 2026-04-28
 
 ### Changed
@@ -56,6 +62,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cross-platform packaging via electron-builder (macOS, Windows, Linux)
 - GitHub Actions workflows for CI and releases on push to `main`
 
+[0.1.5]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.4]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.3]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.2]: https://github.com/fontana-labs/cursor-stats/releases
