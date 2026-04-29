@@ -4,17 +4,31 @@
 
 > **Unofficial.** This project is not affiliated with or endorsed by Cursor. It reads data from your Cursor account session the same way a browser would after you sign in.
 
+## Screenshots
+
+Dashboard (**light** and **dark**):
+
+<table>
+<tr>
+<td width="50%" valign="top" align="center"><strong>Light</strong><br /><a href="./docs/Screenshot%202026-04-28%20at%2017.43.44.png"><img src="./docs/Screenshot%202026-04-28%20at%2017.43.44.png" width="300" alt="Cursor stats dashboard — light theme" /></a></td>
+<td width="50%" valign="top" align="center"><strong>Dark</strong><br /><a href="./docs/Screenshot%202026-04-28%20at%2017.43.48.png"><img src="./docs/Screenshot%202026-04-28%20at%2017.43.48.png" width="300" alt="Cursor stats dashboard — dark theme" /></a></td>
+</tr>
+</table>
+
+<p align="center"><strong>Tray</strong> (status detail)<br /><a href="./docs/Screenshot%202026-04-28%20at%2016.55.30.png"><img src="./docs/Screenshot%202026-04-28%20at%2016.55.30.png" width="280" alt="Cursor stats tray icon and status" /></a></p>
+
 ## Install
 
-| Windows | macOS | Linux |
-|:-------:|:-----:|:-----:|
-| [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/windows11/windows11-original.svg" alt="Windows" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases) | [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/apple/apple-original.svg" alt="macOS" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases) | [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/linux/linux-original.svg" alt="Linux" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases) |
-| **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** | **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** | **[Download →](https://github.com/fontana-labs/cursor-stats/releases)** |
-| NSIS **Setup** (`.exe`) or **portable** `.exe` | **DMG** or **ZIP** | **AppImage** or **deb** |
+Prebuilt binaries for **[v0.1.4-build.10](https://github.com/fontana-labs/cursor-stats/releases/tag/v0.1.4-build.10)** (direct links; **[all releases →](https://github.com/fontana-labs/cursor-stats/releases)** for other versions):
+
+| Windows | macOS (universal) | Linux |
+|:-------:|:-----------------:|:-----:|
+| [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/windows11/windows11-original.svg" alt="Windows" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats.Setup.0.1.4.exe) | [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/apple/apple-original.svg" alt="macOS" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats-0.1.4-universal.dmg) | [<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/linux/linux-original.svg" alt="Linux" width="40" height="40">](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/cursor-stats-0.1.4-x86_64.AppImage) |
+| **[Installer →](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats.Setup.0.1.4.exe)** · [Portable `.exe`](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats.0.1.4.exe) | **[DMG →](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats-0.1.4-universal.dmg)** · [ZIP](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/Cursor.stats-0.1.4-universal-mac.zip) | **[AppImage →](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/cursor-stats-0.1.4-x86_64.AppImage)** · [deb](https://github.com/fontana-labs/cursor-stats/releases/download/v0.1.4-build.10/cursor-stats-0.1.4-amd64.deb) |
 
 ### macOS (prebuilt from GitHub)
 
-1. On [Releases](https://github.com/fontana-labs/cursor-stats/releases), open the **latest** release and download an asset named like **`Cursor stats-…dmg`** or **`…zip`** — not **`.exe`** (Windows), **`.AppImage`**, or **`.deb`**.
+1. Download the **DMG** or **ZIP** above — not **`.exe`**, **`.AppImage`**, or **`.deb`**.
 2. CI builds are **not signed or notarized**, so **Gatekeeper** may block the first launch:
    - **System Settings** → **Privacy & Security** → find the message about the app → **Open Anyway**, or  
    - **Control-click** the app → **Open** → confirm **Open**.
@@ -48,10 +62,10 @@ npm start
 
 ## Contents
 
+- [Screenshots](#screenshots)
 - [Install](#install)
 - [Features](#features)
 - [First run](#first-run)
-- [Screenshots](#screenshots)
 - [How it works](#how-it-works)
 - [Development](#development)
 - [Repository layout](#repository-layout)
@@ -76,18 +90,6 @@ npm start
 3. Open the dashboard from the tray menu. Stats refresh on a timer; you can also trigger a refresh from the UI when available.
 
 Data comes from Cursor’s dashboard and APIs while you are logged in. If Cursor changes their site or APIs, some panels may need an app update.
-
-## Screenshots
-
-### System Tray
-
-![Cursor stats main window: allowance pace chart, pool usage, and per-model costs](./docs/Screenshot%202026-04-28%20at%2016.55.30.png)
-
-### Stats Panel
-
-![Cursor stats dashboard showing month vs allowance pace and usage breakdown](./docs/Screenshot%202026-04-28%20at%2017.43.44.png)
-
-![Cursor stats dashboard with models pricing and usage table](./docs/Screenshot%202026-04-28%20at%2017.43.48.png)
 
 ## How it works
 
