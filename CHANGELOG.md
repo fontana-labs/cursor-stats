@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-01
+
+### Client
+
+- Usage pace warnings now show an expected allowance runout date with ordinal day/month copy and reset-relative timing.
+- Month vs allowance chart now draws color-matched dashed runout projections for Auto + Composer and API usage when either pool is ahead of pace.
+- Runout projections now use actual elapsed billing time, so over-pace warnings no longer predict runout after reset or show misleading API dashes when API usage is under pace.
+- Footer credit spacing and label order are adjusted for cleaner alignment.
+
 ## [0.1.5] - 2026-04-29
 
 ### Client
@@ -62,6 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cross-platform packaging via electron-builder (macOS, Windows, Linux)
 - GitHub Actions workflows for CI and releases on push to `main`
 
+[0.2.0]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.5]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.4]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.3]: https://github.com/fontana-labs/cursor-stats/releases

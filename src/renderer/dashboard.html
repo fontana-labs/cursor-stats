@@ -535,7 +535,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 8px;
-        padding: 3px 8px 4px;
+        padding: 3px 4px 4px 8px;
         font-size: 8px;
         color: var(--text-footer);
         border-top: 1px solid var(--border);
@@ -795,6 +795,7 @@
         id="link-fontana"
         title="Fontana"
       >
+        <span>Made by Fontana Labs</span>
         <img
           src="fontana-logo.png"
           alt=""
@@ -803,7 +804,6 @@
           height="16"
           aria-hidden="true"
         />
-        <span>Made by Fontana Labs</span>
       </a>
     </footer>
     <script>
@@ -963,6 +963,37 @@
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;");
+        }
+
+        /** e.g. 17th Jun (locale month abbreviation). */
+        function formatOrdinalDayMonth(d) {
+          if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
+          const day = d.getDate();
+          const mod100 = day % 100;
+          const mod10 = day % 10;
+          var suf = "th";
+          if (mod100 < 11 || mod100 > 13) {
+            if (mod10 === 1) suf = "st";
+            else if (mod10 === 2) suf = "nd";
+            else if (mod10 === 3) suf = "rd";
+          }
+          const month = d.toLocaleDateString(undefined, { month: "short" });
+          return day + suf + " " + month;
+        }
+
+        function billingElapsedDays(billing) {
+          const D = Math.max(1, billing && billing.daysTotal ? billing.daysTotal : 1);
+          const start = new Date(
+            billing && billing.periodStart != null
+              ? billing.periodStart
+              : billing && billing.periodStartKey
+                ? billing.periodStartKey + "T00:00:00"
+                : Date.now(),
+          );
+          if (Number.isNaN(start.getTime())) {
+            return Math.max(0.001, Math.min(D, billing && billing.currentDayIndex ? billing.currentDayIndex : 0));
+          }
+          return Math.max(0.001, Math.min(D, (Date.now() - start.getTime()) / 86400000));
         }
 
         function setBanner(type, text) {
@@ -1435,8 +1466,8 @@
           }
 
           const D = Math.max(1, billing.daysTotal);
-          const curD = Math.max(0, billing.currentDayIndex);
-          const pace = (curD / D) * 100;
+          const elapsedDays = billingElapsedDays(billing);
+          const pace = (elapsedDays / D) * 100;
           const periodEnd = new Date(
             billing.periodEnd != null
               ? typeof billing.periodEnd === "string"
@@ -1452,24 +1483,51 @@
               return "at or over 100% of this pool — the allowance is exhausted until reset.";
             }
             if (usagePct < pace) return null;
-            const daysElapsed = curD + 1;
-            const rate = usagePct / Math.max(1, daysElapsed);
+            const rate = usagePct / elapsedDays;
             if (rate < 0.01) return null;
             const daysToFull = (100 - usagePct) / rate;
             if (!Number.isFinite(daysToFull) || daysToFull < 0 || daysToFull > 400) return null;
             const when = new Date();
             when.setDate(when.getDate() + Math.ceil(daysToFull));
-            const fmt = when.toLocaleDateString(undefined, { day: "numeric", month: "short" });
-            const beforeReset = Math.round((periodEnd - when) / 86400000);
-            if (endOk && when.getTime() < periodEnd.getTime() - 8 * 3600000) {
-              return `expected to run out by ${fmt}, ${beforeReset} day${
-                beforeReset === 1 ? "" : "s"
-              } before monthly reset`;
+            const ord = formatOrdinalDayMonth(when);
+            if (!ord) return null;
+            var resetPhrase;
+            if (endOk) {
+              const beforeReset = Math.round((periodEnd - when) / 86400000);
+              if (when.getTime() < periodEnd.getTime() - 8 * 3600000) {
+                if (beforeReset <= 0) {
+                  resetPhrase = "on the billing reset date";
+                } else {
+                  resetPhrase =
+                    beforeReset +
+                    " day" +
+                    (beforeReset === 1 ? "" : "s") +
+                    " before reset";
+                }
+              } else if (when.getTime() > periodEnd.getTime() + 8 * 3600000) {
+                const afterReset = Math.round((when - periodEnd) / 86400000);
+                if (afterReset <= 0) {
+                  resetPhrase = "around monthly reset";
+                } else {
+                  resetPhrase =
+                    afterReset +
+                    " day" +
+                    (afterReset === 1 ? "" : "s") +
+                    " after reset";
+                }
+              } else {
+                resetPhrase = "around monthly reset";
+              }
+            } else {
+              resetPhrase = "relative to monthly reset";
             }
-            if (endOk && when.getTime() > periodEnd.getTime() + 8 * 3600000) {
-              return `linear trend can reach 100% after this cycle’s reset (~${fmt})`;
-            }
-            return `expected to run out by ${fmt}`;
+            return (
+              "At this pace you are expected to run out of your allowance by " +
+              ord +
+              ". (" +
+              resetPhrase +
+              ")."
+            );
           }
 
           function setPoolPaceBox(el, label, usagePct) {
@@ -1503,7 +1561,11 @@
             const ro = runoutLine(usagePct);
             el.className = "pie-status pie-status--amber";
             el.hidden = false;
-            const tail = Math.round(diff) + "% over the even monthly pace" + (ro ? " — " + ro : "") + ".";
+            const tail =
+              Math.round(diff) +
+              "% over the even monthly pace" +
+              (ro ? " - " + ro : "") +
+              (ro ? "" : ".");
             el.innerHTML = L + escapeHtml(tail);
           }
 
@@ -1563,6 +1625,7 @@
           const gh = ch - padT - padB;
           const D = Math.max(1, billing.daysTotal);
           const curD = Math.max(0, billing.currentDayIndex);
+          const elapsedDays = billingElapsedDays(billing);
 
           function xOf(day) {
             return padL + (day / D) * gw;
@@ -1777,9 +1840,10 @@
             }
           }
 
-          ctx.strokeStyle = "rgba(37, 99, 235, 0.9)";
-          ctx.lineWidth = 1.5;
-          ctx.setLineDash([5, 4]);
+          /** Ideal even-use diagonal (neutral) — distinct from blue API projection dashes. */
+          ctx.strokeStyle = isDarkMode() ? "rgba(161, 161, 170, 0.45)" : "rgba(113, 113, 122, 0.45)";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([6, 5]);
           ctx.beginPath();
           ctx.moveTo(xOf(0), yOf(0));
           ctx.lineTo(xOf(D), yOf(100));
@@ -1790,7 +1854,7 @@
             if (usagePct == null) return;
             const yEnd = yOf(Math.min(usagePct, 115));
             const x0 = xOf(0);
-            const xC = xOf(curD);
+            const xC = xOf(elapsedDays);
             ctx.strokeStyle = color;
             ctx.lineWidth = 2.5;
             ctx.setLineDash([]);
@@ -1840,6 +1904,50 @@
           } else {
             drawLineFromZero(uApi, "#2563eb");
           }
+
+          function cumulativeAtCurD(series, fallback) {
+            if (series && series.length) {
+              const ix = Math.min(curD, series.length - 1);
+              const v = series[ix];
+              if (v != null && Number.isFinite(Number(v))) return Number(v);
+            }
+            return fallback;
+          }
+
+          const autoAtCur = cumulativeAtCurD(aSeries, uAuto);
+          const apiAtCur = cumulativeAtCurD(pSeries, uApi);
+
+          /**
+           * Linear burn extrapolation from average daily rate (same basis as runout copy).
+           * Steeper when usage is further above even monthly pace.
+           */
+          function drawPaceRunoutProjection(usagePct, dashColor) {
+            if (usagePct == null || usagePct >= 100) return;
+            const paceAt = (elapsedDays / D) * 100;
+            if (usagePct - paceAt < 0.4) return;
+            const rate = usagePct / elapsedDays;
+            if (rate < 0.01) return;
+            const d100 = (100 * elapsedDays) / Math.max(usagePct, 1e-9);
+            if (!Number.isFinite(d100) || d100 <= elapsedDays) return;
+            const span = d100 - elapsedDays;
+            if (span > 420) return;
+            ctx.strokeStyle = dashColor;
+            ctx.lineWidth = 1.75;
+            ctx.setLineDash([4, 3]);
+            ctx.beginPath();
+            ctx.moveTo(xOf(elapsedDays), yOf(Math.min(usagePct, 100)));
+            ctx.lineTo(xOf(d100), yOf(100));
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+
+          drawPaceRunoutProjection(autoAtCur, "rgba(124, 58, 237, 0.92)");
+          /**
+           * API runout: same extrapolation as Auto (purple). Do not draw (curD,0)→(D,100) for zero API —
+           * that always meets 100% at period end (x=D) while over-pace Auto can hit 100% only after day D,
+           * so the blue line looked earlier / more “alarming” even when API was under pace.
+           */
+          drawPaceRunoutProjection(apiAtCur, "rgba(37, 99, 235, 0.92)");
 
           ctx.fillStyle = ct.label;
           ctx.font = "8px system-ui,sans-serif";
