@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-05-03
+
+### Client
+
+- Month vs allowance chart shows two **50% orange** bands—one for **Auto + Composer** and one for **API**—so you can see when only one pool is projected to hit or has passed 100% before reset.
+- Chart legend lists separate **Auto over 100%** and **API over 100%** keys for those bands.
+- Runout bands and dashed projections prefer **headline pool percentages** when the in-chart usage series would otherwise lag a fresh refresh.
+
 ## [0.2.0] - 2026-05-01
 
 ### Client
@@ -71,6 +79,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cross-platform packaging via electron-builder (macOS, Windows, Linux)
 - GitHub Actions workflows for CI and releases on push to `main`
 
+[0.2.1]: https://github.com/fontana-labs/cursor-stats/releases
 [0.2.0]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.5]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.4]: https://github.com/fontana-labs/cursor-stats/releases

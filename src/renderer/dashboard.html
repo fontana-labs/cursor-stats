@@ -77,7 +77,8 @@
         --st-muted-bg: #fafafa;
         --st-muted-br: #e4e4e7;
         --st-muted-fg: #71717a;
-        --sw-over: rgba(249, 115, 22, 0.65);
+        --sw-over-auto: rgba(249, 115, 22, 0.5);
+        --sw-over-api: rgba(249, 115, 22, 0.5);
       }
       [data-theme="dark"] {
         color-scheme: dark;
@@ -136,7 +137,8 @@
         --st-muted-bg: #27272a;
         --st-muted-br: #3f3f46;
         --st-muted-fg: #a1a1aa;
-        --sw-over: rgba(251, 146, 60, 0.75);
+        --sw-over-auto: rgba(251, 146, 60, 0.5);
+        --sw-over-api: rgba(251, 146, 60, 0.5);
       }
       * {
         box-sizing: border-box;
@@ -377,8 +379,13 @@
       .sw.api {
         background: #2563eb;
       }
-      .sw.over {
-        background: var(--sw-over);
+      .sw.over-auto {
+        background: var(--sw-over-auto);
+        height: 8px;
+        border-radius: 2px;
+      }
+      .sw.over-api {
+        background: var(--sw-over-api);
         height: 8px;
         border-radius: 2px;
       }
@@ -728,7 +735,8 @@
             <span><i class="sw allow"></i> Allowance</span>
             <span><i class="sw auto"></i> Auto + Composer</span>
             <span><i class="sw api"></i> API</span>
-            <span><i class="sw over"></i> Over 100% pool</span>
+            <span><i class="sw over-auto"></i> Auto over 100%</span>
+            <span><i class="sw over-api"></i> API over 100%</span>
           </div>
         </div>
         <section class="section-tight section-tight--pies" id="breakdown-section">
@@ -909,7 +917,8 @@
               pieEmpty: "#3f3f46",
               sliceEdge: "rgba(0,0,0,0.5)",
               pieCenterText: "#d4d4d8",
-              poolOverageBand: "rgba(251, 146, 60, 0.22)",
+              autoOverageBand: "rgba(251, 146, 60, 0.5)",
+              apiOverageBand: "rgba(251, 146, 60, 0.5)",
             };
           }
           return {
@@ -922,7 +931,8 @@
             pieEmpty: "#e4e4e7",
             sliceEdge: "rgba(255,255,255,0.85)",
             pieCenterText: "#ffffff",
-            poolOverageBand: "rgba(249, 115, 22, 0.2)",
+            autoOverageBand: "rgba(249, 115, 22, 0.5)",
+            apiOverageBand: "rgba(249, 115, 22, 0.5)",
           };
         }
 
@@ -1591,6 +1601,23 @@
           return "Sign in; stats refresh automatically when this window is open…";
         }
 
+        /**
+         * Chart projection diagnostics. In the dashboard DevTools console run:
+         *   localStorage.setItem("cursorStatsChartDebug", "1"); location.reload();
+         * Copy lines starting with "[cursor-stats:chart]". Disable with removeItem or "0".
+         */
+        function chartDebugEnabled() {
+          try {
+            return localStorage.getItem("cursorStatsChartDebug") === "1";
+          } catch (e) {
+            return false;
+          }
+        }
+        function chartDebugLog(payload) {
+          if (!chartDebugEnabled()) return;
+          console.log("[cursor-stats:chart]", payload);
+        }
+
         function drawUsageChart(canvas, payload) {
           if (!canvas) return;
           const ctx = canvas.getContext("2d");
@@ -1624,7 +1651,7 @@
           const gw = cw - padL - padR;
           const gh = ch - padT - padB;
           const D = Math.max(1, billing.daysTotal);
-          const curD = Math.max(0, billing.currentDayIndex);
+          const curD = Math.max(0, Math.min(D, billing.currentDayIndex));
           const elapsedDays = billingElapsedDays(billing);
 
           function xOf(day) {
@@ -1654,25 +1681,28 @@
           const uAuto = stats && stats.autoPercent != null ? stats.autoPercent : null;
           const uApi = stats && stats.apiPercent != null ? stats.apiPercent : null;
 
-          function xOverageBandStart(usagePct) {
+          function xRunoutBandStart(usagePct) {
             if (usagePct == null || !Number.isFinite(Number(usagePct))) return null;
             const u = Number(usagePct);
-            if (u < 100 || curD < 0) return null;
-            const dCross = (100 * curD) / Math.max(u, 1e-9);
-            if (dCross > curD) return null;
-            return xOf(dCross);
+            const paceAt = (elapsedDays / D) * 100;
+            if (u < 100 && u - paceAt < 0.4) return null;
+            const rate = u / elapsedDays;
+            if (rate < 0.01) return null;
+            const d100 = (100 * elapsedDays) / Math.max(u, 1e-9);
+            if (!Number.isFinite(d100) || d100 > D) return null;
+            return xOf(Math.max(0, Math.min(D, d100)));
           }
-          const xBandStarts = [xOverageBandStart(uAuto), xOverageBandStart(uApi)].filter(function (x) {
-            return x != null;
-          });
-          if (xBandStarts.length) {
-            const x1 = Math.min.apply(null, xBandStarts);
+          function drawRunoutBand(usagePct, color) {
+            const x1 = xRunoutBandStart(usagePct);
+            if (x1 == null) return;
             const xR = padL + gw;
             if (x1 < xR) {
-              ctx.fillStyle = ct.poolOverageBand;
+              ctx.fillStyle = color;
               ctx.fillRect(x1, padT, xR - x1, gh);
             }
           }
+          drawRunoutBand(uAuto, ct.autoOverageBand);
+          drawRunoutBand(uApi, ct.apiOverageBand);
 
           const us = payload && payload.usageSeries;
           const aSeries = us && Array.isArray(us.auto) && us.auto.length ? us.auto : null;
@@ -1914,40 +1944,150 @@
             return fallback;
           }
 
-          const autoAtCur = cumulativeAtCurD(aSeries, uAuto);
-          const apiAtCur = cumulativeAtCurD(pSeries, uApi);
+          /** Match status boxes + runout bands: headline percents can lead stale usageSeries after refresh. */
+          const autoAtCur =
+            uAuto != null && Number.isFinite(Number(uAuto))
+              ? Number(uAuto)
+              : cumulativeAtCurD(aSeries, null);
+          const apiAtCur =
+            uApi != null && Number.isFinite(Number(uApi))
+              ? Number(uApi)
+              : cumulativeAtCurD(pSeries, null);
 
           /**
            * Linear burn extrapolation from average daily rate (same basis as runout copy).
            * Steeper when usage is further above even monthly pace.
            */
-          function drawPaceRunoutProjection(usagePct, dashColor) {
-            if (usagePct == null || usagePct >= 100) return;
-            const paceAt = (elapsedDays / D) * 100;
-            if (usagePct - paceAt < 0.4) return;
-            const rate = usagePct / elapsedDays;
-            if (rate < 0.01) return;
-            const d100 = (100 * elapsedDays) / Math.max(usagePct, 1e-9);
-            if (!Number.isFinite(d100) || d100 <= elapsedDays) return;
+          function drawPaceRunoutProjection(pool, usagePct, dashColor) {
+            const paceAtFull = (elapsedDays / D) * 100;
+            if (usagePct == null || !Number.isFinite(Number(usagePct))) {
+              chartDebugLog({
+                pool,
+                action: "skip",
+                reason: "usagePct null or not finite",
+                usagePct,
+                elapsedDays,
+                D,
+                curD,
+                paceAtPercent: paceAtFull,
+              });
+              return;
+            }
+            const uPct = Number(usagePct);
+            if (uPct >= 100) {
+              chartDebugLog({
+                pool,
+                action: "skip",
+                reason: "usage at or over 100%",
+                usagePct: uPct,
+                paceAtPercent: paceAtFull,
+              });
+              return;
+            }
+            const paceAt = paceAtFull;
+            if (uPct - paceAt < 0.4) {
+              chartDebugLog({
+                pool,
+                action: "skip",
+                reason: "on or under monthly pace (need usage − pace ≥ 0.4)",
+                usagePct: uPct,
+                paceAtPercent: paceAt,
+                diffFromPace: uPct - paceAt,
+              });
+              return;
+            }
+            const rate = uPct / elapsedDays;
+            if (rate < 0.01) {
+              chartDebugLog({
+                pool,
+                action: "skip",
+                reason: "avg daily rate < 0.01",
+                usagePct: uPct,
+                rate,
+                elapsedDays,
+              });
+              return;
+            }
+            const d100 = (100 * elapsedDays) / Math.max(uPct, 1e-9);
+            if (!Number.isFinite(d100) || d100 <= elapsedDays) {
+              chartDebugLog({
+                pool,
+                action: "skip",
+                reason: "d100 not finite or not after elapsedDays",
+                usagePct: uPct,
+                d100,
+                elapsedDays,
+              });
+              return;
+            }
             const span = d100 - elapsedDays;
-            if (span > 420) return;
+            if (span > 420) {
+              chartDebugLog({
+                pool,
+                action: "skip",
+                reason: "projection span > 420 days",
+                span,
+                d100,
+                elapsedDays,
+              });
+              return;
+            }
+            const x0 = xOf(elapsedDays);
+            const y0 = yOf(Math.min(uPct, 100));
+            const x1 = xOf(d100);
+            const y1 = yOf(100);
+            chartDebugLog({
+              pool,
+              action: "draw",
+              usagePct: uPct,
+              paceAtPercent: paceAt,
+              elapsedDays,
+              D,
+              curD,
+              d100,
+              spanDays: span,
+              canvasSeg: { x0, y0, x1, y1 },
+              dashColor,
+            });
             ctx.strokeStyle = dashColor;
             ctx.lineWidth = 1.75;
             ctx.setLineDash([4, 3]);
             ctx.beginPath();
-            ctx.moveTo(xOf(elapsedDays), yOf(Math.min(usagePct, 100)));
-            ctx.lineTo(xOf(d100), yOf(100));
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x1, y1);
             ctx.stroke();
             ctx.setLineDash([]);
           }
 
-          drawPaceRunoutProjection(autoAtCur, "rgba(124, 58, 237, 0.92)");
+          if (chartDebugEnabled()) {
+            chartDebugLog({
+              action: "drawUsageChart snapshot",
+              D,
+              curD,
+              elapsedDays,
+              paceAtPercent: (elapsedDays / D) * 100,
+              uAuto,
+              uApi,
+              autoAtCur,
+              apiAtCur,
+              aSeriesLen: aSeries ? aSeries.length : null,
+              pSeriesLen: pSeries ? pSeries.length : null,
+              aSeriesTail: aSeries
+                ? aSeries.slice(Math.max(0, aSeries.length - 3))
+                : null,
+              pSeriesTail: pSeries
+                ? pSeries.slice(Math.max(0, pSeries.length - 3))
+                : null,
+            });
+          }
+
+          drawPaceRunoutProjection("auto", autoAtCur, "rgba(124, 58, 237, 0.92)");
           /**
            * API runout: same extrapolation as Auto (purple). Do not draw (curD,0)→(D,100) for zero API —
            * that always meets 100% at period end (x=D) while over-pace Auto can hit 100% only after day D,
            * so the blue line looked earlier / more “alarming” even when API was under pace.
            */
-          drawPaceRunoutProjection(apiAtCur, "rgba(37, 99, 235, 0.92)");
+          drawPaceRunoutProjection("api", apiAtCur, "rgba(37, 99, 235, 0.92)");
 
           ctx.fillStyle = ct.label;
           ctx.font = "8px system-ui,sans-serif";
