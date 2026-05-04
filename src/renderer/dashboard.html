@@ -77,8 +77,7 @@
         --st-muted-bg: #fafafa;
         --st-muted-br: #e4e4e7;
         --st-muted-fg: #71717a;
-        --sw-over-auto: rgba(249, 115, 22, 0.5);
-        --sw-over-api: rgba(249, 115, 22, 0.5);
+        --sw-over-allowance: rgba(249, 115, 22, 0.5);
       }
       [data-theme="dark"] {
         color-scheme: dark;
@@ -137,8 +136,7 @@
         --st-muted-bg: #27272a;
         --st-muted-br: #3f3f46;
         --st-muted-fg: #a1a1aa;
-        --sw-over-auto: rgba(251, 146, 60, 0.5);
-        --sw-over-api: rgba(251, 146, 60, 0.5);
+        --sw-over-allowance: rgba(251, 146, 60, 0.5);
       }
       * {
         box-sizing: border-box;
@@ -379,13 +377,8 @@
       .sw.api {
         background: #2563eb;
       }
-      .sw.over-auto {
-        background: var(--sw-over-auto);
-        height: 8px;
-        border-radius: 2px;
-      }
-      .sw.over-api {
-        background: var(--sw-over-api);
+      .sw.over-allowance {
+        background: var(--sw-over-allowance);
         height: 8px;
         border-radius: 2px;
       }
@@ -735,8 +728,7 @@
             <span><i class="sw allow"></i> Allowance</span>
             <span><i class="sw auto"></i> Auto + Composer</span>
             <span><i class="sw api"></i> API</span>
-            <span><i class="sw over-auto"></i> Auto over 100%</span>
-            <span><i class="sw over-api"></i> API over 100%</span>
+            <span><i class="sw over-allowance"></i> Over allowance</span>
           </div>
         </div>
         <section class="section-tight section-tight--pies" id="breakdown-section">

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-05-04
+
+### Client
+
+- Month vs allowance chart legend uses one **Over allowance** swatch (shared orange band styling) instead of separate Auto and API over-100% rows.
+
 ## [0.2.1] - 2026-05-03
 
 ### Client
@@ -79,6 +85,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cross-platform packaging via electron-builder (macOS, Windows, Linux)
 - GitHub Actions workflows for CI and releases on push to `main`
 
+[0.2.2]: https://github.com/fontana-labs/cursor-stats/releases
 [0.2.1]: https://github.com/fontana-labs/cursor-stats/releases
 [0.2.0]: https://github.com/fontana-labs/cursor-stats/releases
 [0.1.5]: https://github.com/fontana-labs/cursor-stats/releases
