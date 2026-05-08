@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-05-08
+
+### Client
+
+- Month vs allowance chart draws a **vertical gray line** at **today** (elapsed time in the billing window), aligned with where cumulative usage lines end.
+- **Today** label sits **under** that line on the bottom margin with the period dates.
+- Chart drawing restores canvas text state after the Today label so **bottom axis labels** stay aligned (no accidental baseline shift).
+- Removed the centered **current-day counter** (for example **d10/30**) under the chart.
+
 ## [0.3.2] - 2026-05-08
 
 ### Client
@@ -107,6 +116,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cross-platform packaging via electron-builder (macOS, Windows, Linux)
 - GitHub Actions workflows for CI and releases on push to `main`
 
+[0.3.3]: https://github.com/fontana-labs/cursor-stats/releases
 [0.3.2]: https://github.com/fontana-labs/cursor-stats/releases
 [0.3.1]: https://github.com/fontana-labs/cursor-stats/releases
 [0.3.0]: https://github.com/fontana-labs/cursor-stats/releases

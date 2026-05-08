@@ -917,6 +917,7 @@
               plotBg: "#27272a",
               grid: "#3f3f46",
               axis: "#71717a",
+              todayLine: "rgba(161, 161, 170, 0.55)",
               label: "#a1a1aa",
               emptyHint: "#a1a1aa",
               pieFill: "#27272a",
@@ -931,6 +932,7 @@
             plotBg: "#fafafa",
             grid: "#e4e4e7",
             axis: "#a1a1aa",
+            todayLine: "rgba(113, 113, 122, 0.55)",
             label: "#52525b",
             emptyHint: "#71717a",
             pieFill: "#f4f4f5",
@@ -2181,6 +2183,15 @@
            */
           drawPaceRunoutProjection("api", apiAtCur, "rgba(37, 99, 235, 0.92)");
 
+          const xToday = xOf(Math.min(D, Math.max(0, elapsedDays)));
+          ctx.strokeStyle = ct.todayLine;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.moveTo(xToday, padT);
+          ctx.lineTo(xToday, padT + gh);
+          ctx.stroke();
+
           ctx.fillStyle = ct.label;
           ctx.font = "8px system-ui,sans-serif";
           ctx.fillText("0%", 2, yOf(0) + 3);
@@ -2197,7 +2208,12 @@
 
           ctx.fillText(fmtShort(billing.periodStartKey), padL, ch - 4);
           ctx.fillText(fmtShort(billing.periodEndKey), padL + gw - 32, ch - 4);
-          ctx.fillText("d" + (curD + 1) + "/" + D, padL + gw / 2 - 12, ch - 4);
+          ctx.save();
+          ctx.fillStyle = ct.label;
+          ctx.font = "7px system-ui,sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("Today", xToday, ch - 4);
+          ctx.restore();
         }
 
         function redrawChart(payload) {
