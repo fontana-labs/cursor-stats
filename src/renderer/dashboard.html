@@ -654,10 +654,24 @@
         align-content: center;
         box-sizing: border-box;
       }
+      .pie-status--with-advice {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-content: normal;
+      }
       .pie-status strong {
         font-weight: 650;
         font-size: 8px;
         letter-spacing: 0.01em;
+      }
+      .pace-status-main {
+        display: block;
+      }
+      .pie-status .pace-advice {
+        display: block;
+        margin-top: 3px;
+        text-align: center;
       }
       .pie-status--green {
         background: var(--st-green-bg);
@@ -1478,6 +1492,53 @@
               : billing.periodEndKey + "T12:00:00",
           );
           const endOk = !Number.isNaN(periodEnd.getTime());
+          const overPaceAdvice = [
+            "Slow down! 🐌",
+            "Mind your usage! 📈",
+            "Ease off the throttle! 🛑",
+            "Save some for later! 🧃",
+            "Tap the brakes! 🛞",
+            "Let the quota breathe! 🌬️",
+            "Cruise mode, not sprint mode! 🚦",
+            "Future you needs tokens too! 🧠",
+            "Pace yourself! ⏳",
+            "Ration the magic! 🪄",
+          ];
+          const underPaceAdvice = [
+            "Use it more! 💪",
+            "Speed up! 🏎️",
+            "Plenty left in the tank! ⛽",
+            "You can push harder! 🚀",
+            "Let it cook! 🍳",
+            "Spend those tokens! 🪙",
+            "The runway is clear! 🛫",
+            "No need to be shy! 😎",
+            "Go build something wild! 🛠️",
+            "Put the allowance to work! ⚙️",
+          ];
+
+          function paceAdviceHtml(kind, label, usagePct) {
+            const options = kind === "over" ? overPaceAdvice : underPaceAdvice;
+            const seed = String(label) + ":" + Math.round(Number(usagePct) || 0) + ":" + billing.currentDayIndex;
+            var hash = 0;
+            for (var i = 0; i < seed.length; i += 1) {
+              hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+            }
+            return (
+              '<strong class="pace-advice">' + escapeHtml(options[hash % options.length]) + "</strong>"
+            );
+          }
+
+          function paceBoxHtml(label, bodyHtml, adviceKind, usagePct) {
+            return (
+              '<span class="pace-status-main"><strong>' +
+              escapeHtml(label) +
+              ":</strong> " +
+              bodyHtml +
+              "</span>" +
+              paceAdviceHtml(adviceKind, label, usagePct)
+            );
+          }
 
           function runoutLine(usagePct) {
             if (usagePct == null) return null;
@@ -1542,9 +1603,9 @@
             }
             if (usagePct >= 100) {
               const msg = runoutLine(usagePct) || "over 100% of this pool’s allowance";
-              el.className = "pie-status pie-status--red";
+              el.className = "pie-status pie-status--red pie-status--with-advice";
               el.hidden = false;
-              el.innerHTML = L + escapeHtml(msg);
+              el.innerHTML = paceBoxHtml(label, escapeHtml(msg), "over", usagePct);
               return;
             }
             const diff = usagePct - pace;
@@ -1555,20 +1616,25 @@
               return;
             }
             if (diff < 0) {
-              el.className = "pie-status pie-status--green";
+              el.className = "pie-status pie-status--green pie-status--with-advice";
               el.hidden = false;
-              el.innerHTML = L + Math.round(Math.abs(diff)) + "% under the even monthly pace!";
+              el.innerHTML = paceBoxHtml(
+                label,
+                Math.round(Math.abs(diff)) + "% under the even monthly pace!",
+                "under",
+                usagePct,
+              );
               return;
             }
             const ro = runoutLine(usagePct);
-            el.className = "pie-status pie-status--amber";
+            el.className = "pie-status pie-status--amber pie-status--with-advice";
             el.hidden = false;
             const tail =
               Math.round(diff) +
               "% over the even monthly pace" +
               (ro ? " - " + ro : "") +
               (ro ? "" : ".");
-            el.innerHTML = L + escapeHtml(tail);
+            el.innerHTML = paceBoxHtml(label, escapeHtml(tail), "over", usagePct);
           }
 
           setPoolPaceBox(pieAutoStatus, "Auto + Composer", stats.autoPercent);

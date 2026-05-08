@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-08
+
+### Client
+
+- Usage pace message boxes now include rotating bold advice for over-pace and under-pace allowance usage, centered at the bottom of each box for cleaner alignment.
+
 ## [0.2.2] - 2026-05-04
 
 ### Client
@@ -85,6 +91,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cross-platform packaging via electron-builder (macOS, Windows, Linux)
 - GitHub Actions workflows for CI and releases on push to `main`
 
+[0.3.0]: https://github.com/fontana-labs/cursor-stats/releases
 [0.2.2]: https://github.com/fontana-labs/cursor-stats/releases
 [0.2.1]: https://github.com/fontana-labs/cursor-stats/releases
 [0.2.0]: https://github.com/fontana-labs/cursor-stats/releases
