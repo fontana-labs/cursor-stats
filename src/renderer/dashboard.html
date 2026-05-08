@@ -301,7 +301,7 @@
         flex-wrap: wrap;
         align-items: baseline;
         justify-content: space-between;
-        gap: 4px 10px;
+        gap: 4px 6px;
         margin-bottom: 2px;
       }
       .chart-wrap__head h2,
@@ -327,10 +327,8 @@
         max-width: 60%;
       }
       .chart-wrap__meta .chart-meta-line {
-        display: flex;
-        justify-content: flex-end;
-        gap: 4px 8px;
-        flex-wrap: wrap;
+        display: block;
+        text-align: right;
         font-size: inherit;
         line-height: inherit;
       }
@@ -900,6 +898,8 @@
 
         let currentSession = null;
         let lastStatsRef = null;
+        /** Latest `billing` from chart payload (for cycle % in usage meta). */
+        let lastChartBilling = null;
         let lastAvatarKey = null;
         let userTheme = null;
         try {
@@ -1010,6 +1010,37 @@
             return Math.max(0.001, Math.min(D, billing && billing.currentDayIndex ? billing.currentDayIndex : 0));
           }
           return Math.max(0.001, Math.min(D, (Date.now() - start.getTime()) / 86400000));
+        }
+
+        /** 0–100 elapsed fraction of billing window; `null` if billing unknown. */
+        function billingCyclePercent(billing) {
+          if (!billing) return null;
+          const start = new Date(
+            billing.periodStart != null
+              ? billing.periodStart
+              : billing.periodStartKey
+                ? billing.periodStartKey + "T00:00:00"
+                : NaN,
+          );
+          const end = new Date(
+            billing.periodEnd != null
+              ? billing.periodEnd
+              : billing.periodEndKey
+                ? billing.periodEndKey + "T00:00:00"
+                : NaN,
+          );
+          if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+          const spanMs = end.getTime() - start.getTime();
+          if (!Number.isFinite(spanMs) || spanMs <= 0) return null;
+          const elapsedMs = Math.max(0, Math.min(spanMs, Date.now() - start.getTime()));
+          return Math.round((elapsedMs / spanMs) * 100);
+        }
+
+        function formatResetRelative(rel) {
+          if (rel == null || rel === "") return "";
+          const t = String(rel).trim();
+          if (/^in\s+/i.test(t)) return t;
+          return "in " + t;
         }
 
         function setBanner(type, text) {
@@ -1176,7 +1207,14 @@
             if (u.email) labelParts.push(u.email);
             if (u.plan) labelParts.push(String(u.plan));
           } else if (stats && (stats.resetLabel || stats.note)) {
-            if (stats.resetLabel) labelParts.push("Billing: " + stats.resetLabel);
+            if (stats.resetLabel) {
+              const cp = billingCyclePercent(lastChartBilling);
+              if (cp != null) {
+                labelParts.push("Billing Cycle: " + cp + "% · reset " + stats.resetLabel);
+              } else {
+                labelParts.push("Billing: " + stats.resetLabel);
+              }
+            }
           } else {
             labelParts.push("Signed in");
           }
@@ -1445,10 +1483,14 @@
               currentSession = payload.session;
             }
             lastAggregatedUsage = payload && payload.aggregatedUsage;
+            lastChartBilling = payload && payload.billing;
             updateHeaderUserName(payload && payload.session);
             redrawChart(payload || {});
             renderSession(payload && payload.session, payload && payload.stats);
             updateHeaderAuth();
+            if (lastStatsRef) {
+              renderUsage(lastStatsRef);
+            }
             if (lastPricingPayload && lastPricingPayload.ok && lastPricingPayload.data) {
               paintPricingTable(lastPricingPayload.data, lastAggregatedUsage);
             }
@@ -2013,8 +2055,8 @@
               : cumulativeAtCurD(pSeries, null);
 
           /**
-           * Linear burn extrapolation from average daily rate (same basis as runout copy).
-           * Steeper when usage is further above even monthly pace.
+           * Linear burn extrapolation from average daily rate. If runout lands after reset,
+           * draw the visible segment through reset instead of skipping the projection.
            */
           function drawPaceRunoutProjection(pool, usagePct, dashColor) {
             const paceAtFull = (elapsedDays / D) * 100;
@@ -2032,25 +2074,13 @@
               return;
             }
             const uPct = Number(usagePct);
-            if (uPct >= 100) {
+            if (uPct <= 0 || uPct >= 100) {
               chartDebugLog({
                 pool,
                 action: "skip",
-                reason: "usage at or over 100%",
+                reason: "usage at zero or at/over 100%",
                 usagePct: uPct,
                 paceAtPercent: paceAtFull,
-              });
-              return;
-            }
-            const paceAt = paceAtFull;
-            if (uPct - paceAt < 0.4) {
-              chartDebugLog({
-                pool,
-                action: "skip",
-                reason: "on or under monthly pace (need usage − pace ≥ 0.4)",
-                usagePct: uPct,
-                paceAtPercent: paceAt,
-                diffFromPace: uPct - paceAt,
               });
               return;
             }
@@ -2079,30 +2109,34 @@
               return;
             }
             const span = d100 - elapsedDays;
-            if (span > 420) {
+            const endDay = Math.min(D, d100);
+            const endPct = d100 <= D ? 100 : Math.min(100, rate * D);
+            const x0 = xOf(elapsedDays);
+            const y0 = yOf(Math.min(uPct, 100));
+            const x1 = xOf(endDay);
+            const y1 = yOf(endPct);
+            if (x1 <= x0 + 0.5) {
               chartDebugLog({
                 pool,
                 action: "skip",
-                reason: "projection span > 420 days",
-                span,
-                d100,
+                reason: "projection segment too short to draw",
+                usagePct: uPct,
+                endDay,
                 elapsedDays,
               });
               return;
             }
-            const x0 = xOf(elapsedDays);
-            const y0 = yOf(Math.min(uPct, 100));
-            const x1 = xOf(d100);
-            const y1 = yOf(100);
             chartDebugLog({
               pool,
               action: "draw",
               usagePct: uPct,
-              paceAtPercent: paceAt,
+              paceAtPercent: paceAtFull,
               elapsedDays,
               D,
               curD,
               d100,
+              endDay,
+              endPct,
               spanDays: span,
               canvasSeg: { x0, y0, x1, y1 },
               dashColor,
@@ -2208,13 +2242,22 @@
           const lines = [];
 
           if (stats.resetLabel) {
-            const rel = stats.resetRelative ? " (" + stats.resetRelative + ")" : "";
+            const cyclePct = billingCyclePercent(lastChartBilling);
+            const relSuffix = stats.resetRelative
+              ? " (" + escapeHtml(formatResetRelative(stats.resetRelative)) + ")"
+              : "";
+            const pctHtml =
+              cyclePct != null
+                ? '<strong>' + escapeHtml(String(cyclePct)) + "%</strong>"
+                : "<strong>—</strong>";
             lines.push(
-              '<div class="chart-meta-line"><span class="muted">Billing reset</span><span><strong>' +
+              '<div class="chart-meta-line"><span class="muted">Billing Cycle:</span> ' +
+                pctHtml +
+                ', <span class="muted">reset:</span> <strong>' +
                 escapeHtml(stats.resetLabel) +
                 "</strong>" +
-                escapeHtml(rel) +
-                "</span></div>",
+                relSuffix +
+                "</div>",
             );
           }
 

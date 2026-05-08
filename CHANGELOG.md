@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-05-08
+
+### Client
+
+- Usage chart header line shows **Billing Cycle:** elapsed **%** of the billing window, **reset:** date, and relative timing as **(in …)** when the spending page provides it; it refreshes after chart data loads so the percent matches the billing window.
+- Less horizontal gap above the chart (title vs meta spacing) and billing meta uses normal wrapped text so commas and words are not spaced like separate flex items.
+- Month vs allowance chart: dashed pace-to-100% lines can run through **billing reset** when the math says runout is after the period end, instead of hiding the line; small or invalid segments are still skipped.
+
 ## [0.3.1] - 2026-05-08
 
 ### Client
@@ -99,6 +107,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Cross-platform packaging via electron-builder (macOS, Windows, Linux)
 - GitHub Actions workflows for CI and releases on push to `main`
 
+[0.3.2]: https://github.com/fontana-labs/cursor-stats/releases
 [0.3.1]: https://github.com/fontana-labs/cursor-stats/releases
 [0.3.0]: https://github.com/fontana-labs/cursor-stats/releases
 [0.2.2]: https://github.com/fontana-labs/cursor-stats/releases
