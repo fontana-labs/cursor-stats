@@ -50,13 +50,17 @@ let lastUsageEventMeta = null;
 /** @type {Record<string, unknown> | null} Aggregated spend by pricing row from get-aggregated-usage-events. */
 let lastAggregatedUsage = null;
 let trayImageFromStats = null;
-/** Throttle auto-refresh while the stats window is visible: only on this interval. */
-let lastStatsWindowAutoRefreshAt = 0;
-const STATS_WINDOW_INTERVAL_MS = 30000;
+/** Throttle periodic refreshes for both tray-only and visible dashboard states. */
+let lastStatsRefreshStartedAt = 0;
+const STATS_REFRESH_INTERVAL_MS = 30000;
 const STATS_POLL_TICK_MS = 1000;
+const TRAY_UPDATE_SPIN_MS = 650;
+const TRAY_UPDATE_SPIN_FRAME_MS = 50;
 /** Keep `/api/auth/me` bounded so the UI is not blocked by a hung request. */
 const AUTH_ME_TIMEOUT_MS = 12000;
 let refreshStatsInFlight = null;
+let trayUpdateSpinTimer = null;
+let trayUpdateSpinStartedAt = 0;
 
 /**
  * Apply `/api/auth/me` as soon as it returns so the dashboard can show the user before spending/billing scrapes finish.
@@ -116,10 +120,49 @@ function positionStatsWindow() {
 function updateTrayIcon(stats) {
   if (!tray || !trayImageFromStats) return;
   try {
-    tray.setImage(trayImageFromStats(stats));
+    const rotation =
+      trayUpdateSpinStartedAt > 0
+        ? Math.min(1, (Date.now() - trayUpdateSpinStartedAt) / TRAY_UPDATE_SPIN_MS)
+        : 0;
+    tray.setImage(trayImageFromStats(addTrayCycleStats(stats), { rotation }));
   } catch (err) {
     console.error("Tray icon update failed:", err);
   }
+}
+
+function addTrayCycleStats(stats) {
+  if (!stats || stats.ok === false) return stats;
+  const billing = computeBillingWindow(stats);
+  if (!billing || !(billing.periodStart instanceof Date) || !(billing.periodEnd instanceof Date)) {
+    return stats;
+  }
+  const startMs = billing.periodStart.getTime();
+  const endMs = billing.periodEnd.getTime();
+  const spanMs = endMs - startMs;
+  if (!Number.isFinite(spanMs) || spanMs <= 0) return stats;
+  const elapsedMs = Math.max(0, Math.min(spanMs, Date.now() - startMs));
+  return {
+    ...stats,
+    cyclePercent: Math.round((elapsedMs / spanMs) * 100),
+  };
+}
+
+function spinTrayAfterUpdate() {
+  if (trayUpdateSpinTimer) {
+    clearInterval(trayUpdateSpinTimer);
+  }
+  trayUpdateSpinStartedAt = Date.now();
+  trayUpdateSpinTimer = setInterval(() => {
+    if (Date.now() - trayUpdateSpinStartedAt >= TRAY_UPDATE_SPIN_MS) {
+      clearInterval(trayUpdateSpinTimer);
+      trayUpdateSpinTimer = null;
+      trayUpdateSpinStartedAt = 0;
+      updateTrayIcon(lastStats);
+      return;
+    }
+    updateTrayIcon(lastStats);
+  }, TRAY_UPDATE_SPIN_FRAME_MS);
+  updateTrayIcon(lastStats);
 }
 
 function getChartPayload() {
@@ -142,14 +185,19 @@ function updateTrayTooltipFromStats(stats) {
   if (!tray || !stats) return;
   const lines = [APP_TITLE];
   if (stats.autoPercent != null) {
-    lines.push(`Auto + Composer: ${stats.autoPercent}%`);
+    lines.push(`Cursor allowance: ${stats.autoPercent}%`);
   }
   if (stats.apiPercent != null) {
-    lines.push(`API pool: ${stats.apiPercent}%`);
+    lines.push(`API allowance: ${stats.apiPercent}%`);
   }
   const billing = stats.ok !== false ? computeBillingWindow(stats) : null;
   if (billing) {
-    lines.push(`Cycle day ${billing.currentDayIndex + 1}/${billing.daysTotal} → ${billing.periodEndLabel}`);
+    const cycleStats = addTrayCycleStats(stats);
+    const cycleText =
+      cycleStats && cycleStats.cyclePercent != null
+        ? `${cycleStats.cyclePercent}% of cycle`
+        : `day ${billing.currentDayIndex + 1}/${billing.daysTotal}`;
+    lines.push(`Billing cycle: ${cycleText} \u2192 ${billing.periodEndLabel}`);
   } else if (stats.resetLabel) {
     lines.push(`Resets ${stats.resetLabel}`);
   }
@@ -520,7 +568,6 @@ async function doRefreshStats({ pushToWindow }) {
     }
 
     if (pushToWindow && statsWindow && !statsWindow.isDestroyed()) {
-      lastStatsWindowAutoRefreshAt = Date.now();
       statsWindow.webContents.send("cursor:stats", stats);
       statsWindow.webContents.send("cursor:chart", getChartPayload());
       statsWindow.webContents.send("cursor:session", lastSession);
@@ -538,10 +585,7 @@ async function doRefreshStats({ pushToWindow }) {
       lastAggregatedUsage = prevAggregatedUsage;
       updateTrayIcon(prevStats);
       updateTrayTooltipFromStats(prevStats);
-      if (pushToWindow && statsWindow && !statsWindow.isDestroyed()) {
-        /* Keep the UI; do not clear or re-send a failed payload. */
-        lastStatsWindowAutoRefreshAt = Date.now();
-      }
+      /* Keep the UI; do not clear or re-send a failed payload. */
       return prevStats;
     }
     const fail = {
@@ -563,7 +607,6 @@ async function doRefreshStats({ pushToWindow }) {
     lastAggregatedUsage = null;
     updateTrayIcon(null);
     if (pushToWindow && statsWindow && !statsWindow.isDestroyed()) {
-      lastStatsWindowAutoRefreshAt = Date.now();
       statsWindow.webContents.send("cursor:stats", fail);
       statsWindow.webContents.send("cursor:chart", getChartPayload());
       statsWindow.webContents.send("cursor:session", null);
@@ -576,10 +619,16 @@ function refreshStats(opts) {
   if (refreshStatsInFlight) {
     return refreshStatsInFlight;
   }
+  lastStatsRefreshStartedAt = Date.now();
   refreshStatsInFlight = doRefreshStats(opts).finally(() => {
     refreshStatsInFlight = null;
+    spinTrayAfterUpdate();
   });
   return refreshStatsInFlight;
+}
+
+function isStatsWindowVisible() {
+  return Boolean(statsWindow && !statsWindow.isDestroyed() && statsWindow.isVisible());
 }
 
 function openLoginWindow() {
@@ -798,14 +847,14 @@ app.whenReady().then(() => {
   removeLegacyDiskCacheFile();
 
   setInterval(() => {
-    if (!statsWindow || statsWindow.isDestroyed() || !statsWindow.isVisible()) {
+    if (refreshStatsInFlight) {
       return;
     }
     const now = Date.now();
-    if (now - lastStatsWindowAutoRefreshAt < STATS_WINDOW_INTERVAL_MS) {
+    if (now - lastStatsRefreshStartedAt < STATS_REFRESH_INTERVAL_MS) {
       return;
     }
-    refreshStats({ pushToWindow: true }).catch((err) => {
+    refreshStats({ pushToWindow: isStatsWindowVisible() }).catch((err) => {
       console.error("auto-refresh:", err);
     });
   }, STATS_POLL_TICK_MS);
